@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ContestFlow | 图表审阅</title>
+<style>
+:root{font-family:Arial,"Microsoft YaHei",sans-serif;color:#24292d;background:#fff;letter-spacing:0;font-size:14px}
+*{box-sizing:border-box}body{margin:0}header{border-bottom:1px solid #d8dedc;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{font-size:20px;margin:0}h2{font-size:17px;margin:0 0 16px}main{max-width:1100px;margin:auto;padding:24px}section{padding:0 0 28px;border-bottom:1px solid #d8dedc;margin-bottom:24px}label{display:flex;align-items:center;gap:8px}.toolbar{display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:16px}select,button{font:inherit;min-height:36px;border:1px solid #aebcb6;border-radius:4px;padding:6px 12px;background:white;color:#24292d}button{cursor:pointer;background:#176349;color:white;border-color:#176349}select:focus,button:focus-visible{outline:3px solid #e5ac48;outline-offset:2px}.swatches{display:flex;gap:5px}.swatches i{width:18px;height:18px;border:1px solid #ddd;border-radius:50%;display:inline-block}.figure{display:block;width:100%;max-width:850px;height:auto;aspect-ratio:2.1;object-fit:contain;object-position:left center}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th,td{text-align:left;padding:12px;border-bottom:1px solid #e1e5e3;overflow-wrap:anywhere}thead{border-top:2px solid #303d37;border-bottom:1px solid #303d37}tbody tr:last-child{border-bottom:2px solid #303d37}.striped tbody tr:nth-child(even){background:#eef4f1}.muted{color:#626d68;font-size:12px}output{color:#176349}footer{padding-bottom:30px}a{color:#176349}.table-scroll{overflow:auto} @media(max-width:600px){header{padding:16px}main{padding:16px}.toolbar{gap:12px}label{flex-wrap:wrap}.figure{aspect-ratio:auto}th,td{padding:9px}select{max-width:100%}}
+</style>
+<header><h1>ContestFlow · 图表审阅</h1><button id="export" type="button">导出选择 JSON</button></header>
+<main><div id="figures"></div><section><div class="toolbar"><h2>结果表</h2><label>样式<select id="table-style"><option value="three-line">三线表</option><option value="striped">隔行底色</option></select></label></div><div class="table-scroll"><table id="results"></table></div></section><footer><output id="status" aria-live="polite">尚未导出</output><p class="muted" id="version"></p></footer></main>
+<script id="data" type="application/json">__PAYLOAD__</script>
+<script>
+"use strict";
+const data=JSON.parse(document.getElementById("data").textContent), choices={};
+const paletteColors={journal:["#0072B2","#D55E00","#009E73"],contrast:["#245C43","#A33754","#326AAB"],mono:["#242424","#666666","#929292"]};
+const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
+for(const [metric,spec] of Object.entries(data.metrics)){
+ const section=node("section");section.id=metric;section.append(node("h2",spec.label));
+ const toolbar=node("div");toolbar.className="toolbar";
+ const selects={};for(const [key,label,options] of [["kind","图型",[["bar","横向条形图"],["dot","点图"]]],["palette","配色",[["journal","蓝橙绿"],["contrast","绿红蓝"],["mono","灰度"]]]]){
+  const l=node("label",label);const s=node("select");s.setAttribute("aria-label",spec.label+label);for(const [v,t] of options){const o=node("option",t);o.value=v;s.append(o);}l.append(s);toolbar.append(l);selects[key]=s;
+ }
+ const swatches=node("span");swatches.className="swatches";toolbar.append(swatches);section.append(toolbar);
+ const img=node("img");img.className="figure";img.alt=spec.label;section.append(img);
+ const update=()=>{const id=`${metric}-${selects.kind.value}-${selects.palette.value}`;const variant=data.variants.find(v=>v.id===id);choices[metric]=id;img.src=variant.png.replace(/^reviews\//,"");swatches.replaceChildren(...paletteColors[selects.palette.value].map(c=>{const s=node("i");s.style.background=c;return s;}));document.getElementById("status").textContent="选择已更新，尚未导出";};
+ Object.values(selects).forEach(s=>s.addEventListener("change",update));update();document.getElementById("figures").append(section);
+}
+const table=document.getElementById("results"),head=node("thead"),hr=node("tr");
+for(const h of ["实验","状态",...Object.values(data.metrics).map(x=>x.label+" ("+x.unit+")")])hr.append(node("th",h));head.append(hr);table.append(head);const body=node("tbody");
+for(const row of data.rows){const tr=node("tr");for(const value of [row.experiment,row.status,...Object.keys(data.metrics).map(k=>Number(row[k]).toPrecision(5))])tr.append(node("td",value));body.append(tr);}table.append(body);
+document.getElementById("table-style").addEventListener("change",e=>{table.className=e.target.value;document.getElementById("status").textContent="选择已更新，尚未导出";});
+document.getElementById("version").textContent="审阅版本："+data.review_id.slice(0,16);
+document.getElementById("export").addEventListener("click",()=>{const value={schema_version:1,review_id:data.review_id,choices,table_style:document.getElementById("table-style").value};const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json"}));const a=node("a");a.href=url;a.download="figure-selection.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);document.getElementById("status").textContent="已导出选择";});
+</script>
+</html>

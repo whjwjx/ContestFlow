@@ -1,0 +1,46 @@
+"""Synthetic assignment example. Core optimization uses SciPy, not custom solver code."""
+import argparse
+import itertools
+import json
+from pathlib import Path
+
+from scipy.optimize import linear_sum_assignment
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--method", choices=["baseline", "improved"], required=True)
+    args = parser.parse_args()
+    matrix = json.loads(Path(args.input).read_text(encoding="utf-8"))["costs"]
+    n = len(matrix)
+    if n > 8 or not n or any(len(row) != n for row in matrix):
+        raise ValueError("This demo requires a square matrix of size 1-8")
+    if args.method == "baseline":
+        available = set(range(n))
+        chosen = []
+        for row in matrix:
+            col = min(available, key=lambda j: (row[j], j))
+            chosen.append(col)
+            available.remove(col)
+    else:
+        rows, cols = linear_sum_assignment(matrix)
+        chosen = [int(col) for col in cols]
+        if list(rows) != list(range(n)):
+            raise ValueError("Unexpected row ordering")
+    legal = len(chosen) == n and set(chosen) == set(range(n))
+    total = sum(matrix[i][col] for i, col in enumerate(chosen))
+    oracle = min(sum(matrix[i][col] for i, col in enumerate(order))
+                 for order in itertools.permutations(range(n)))
+    result = {"valid": legal, "metrics": {"cost": total}, "assignment": chosen,
+              "oracle": oracle, "gap": total - oracle, "data": "synthetic teaching example"}
+    if args.method == "improved" and total != oracle:
+        raise ValueError("SciPy solution disagrees with exhaustive small-instance oracle")
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

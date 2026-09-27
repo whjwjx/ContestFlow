@@ -1,0 +1,38 @@
+"""Chronological holdout demonstration; never fit on held-out observations."""
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--method", choices=["baseline", "improved"], required=True)
+    args = parser.parse_args()
+    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    values = np.asarray(data["values"], dtype=float)
+    split = data["split"]
+    if not 2 <= split < len(values) or not np.isfinite(values).all():
+        raise ValueError("Invalid time series or temporal split")
+    train, test = values[:split], values[split:]
+    if args.method == "baseline":
+        prediction = np.repeat(train[-1], len(test))
+    else:
+        design = np.column_stack([np.arange(split), np.ones(split)])
+        coefficients, *_ = np.linalg.lstsq(design, train, rcond=None)
+        prediction = np.column_stack([np.arange(split, len(values)), np.ones(len(test))]) @ coefficients
+    rmse = float(np.sqrt(np.mean((prediction - test) ** 2)))
+    result = {"valid": bool(len(prediction) == len(test) and np.isfinite(prediction).all()),
+              "metrics": {"rmse": rmse}, "prediction": prediction.tolist(),
+              "train_indices": [0, split - 1], "test_indices": [split, len(values) - 1],
+              "limitation": "Single synthetic holdout, not real-data or rolling-validation evidence"}
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

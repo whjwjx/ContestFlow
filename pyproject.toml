@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contestflow-local"
+version = "0.1.0"
+description = "Evidence-first, AI-ready mathematical modeling competition workflows"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+
+[project.optional-dependencies]
+science = ["numpy>=1.26", "scipy>=1.11", "matplotlib>=3.8"]
+documents = ["pypdf>=5", "pypandoc_binary>=1.15"]
+dev = ["pytest>=8", "ruff>=0.9", "build>=1.2"]
+
+[project.scripts]
+contestflow = "contestflow.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+contestflow = ["templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
