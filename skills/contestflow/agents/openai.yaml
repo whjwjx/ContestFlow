@@ -1,4 +1,4 @@
 interface:
   display_name: "ContestFlow 数模协作"
-  short_description: "团队主导的数模比赛协作，复用工具并保留可核验的研究与交付证据"
-  default_prompt: "使用 $contestflow 检查当前比赛工作区，在已授权阶段内协助推进并说明证据、局限与需要团队判断的问题。"
+  short_description: "团队主导、Agent 主动推进的数模比赛协作与证据工作台"
+  default_prompt: "使用 $contestflow 核对比赛工作区，并在已授权范围内按规划、执行、验证、复盘、继续的闭环主动推进。"

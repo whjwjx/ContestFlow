@@ -42,6 +42,10 @@ def template(name):
 def init(root: Path, title="New competition", git_mode="off"):
     if root.exists() and any(root.iterdir()):
         raise FlowError(f"Refusing to initialize a nonempty directory: {root}")
+    if git_mode != "off":
+        from .version_control import validate_target
+
+        validate_target(root, git_mode)
     root.mkdir(parents=True, exist_ok=True)
     for name in DIRECTORIES:
         local(root, name).mkdir(parents=True, exist_ok=True)
@@ -84,14 +88,15 @@ def init(root: Path, title="New competition", git_mode="off"):
     write_text(root / "paper/references.bib", "% Add only verified references.\n")
     write_text(
         root / "docs/DECISIONS.md",
-        "# 团队决策与阶段复盘\n\n"
-        "按阶段记录实际发生的工作与讨论，不为普通命令单独填表。\n\n"
+        "# 阶段计划、决策与复盘\n\n"
+        "按有意义的阶段维护一份连续记录，不为普通命令单独填表。\n\n"
         "## 阶段记录格式\n\n"
         "- 本阶段目标与已授权范围：\n"
-        "- AI 提供的候选方案、产物与证据位置：\n"
-        "- 自动检查的结果与局限：\n"
+        "- 执行计划、预算、完成条件与停止条件：\n"
+        "- 已完成工作、产物与证据位置：\n"
+        "- 失败尝试、自动检查结果与局限：\n"
         "- 团队实际意见、决定及依据（未讨论时写待讨论）：\n"
-        "- 尚未解决的问题、下一步安排与预算：\n\n"
+        "- 当前阶段、未解决问题与下一步：\n\n"
         "AI 建议与团队意见分开记录；没有实际反馈时，不填写已确认或已审定。\n",
     )
     write_text(
@@ -212,6 +217,8 @@ def next_task(root: Path):
         **step,
         "collaboration_mode": "team_led",
         "guidance_only": True,
+        "agent_execution": "proactive_within_scope",
+        "continue_when_unblocked": step["stage"] != "frozen",
         "team_focus": TEAM_FOCUS[step["stage"]],
         "human_review": "not_asserted",
     }
@@ -224,14 +231,19 @@ def plan(root: Path):
         "# 当前阶段协作任务\n\n"
         f"建议处理阶段：{step['stage']}（依据现有文件，不代表团队已审定）\n\n"
         f"## 团队判断\n\n{step['team_focus']}\n\n"
-        f"## AI 辅助工作\n\n{step['action']}\n\n"
+        f"## 当前目标\n\n{step['action']}\n\n"
+        "## Agent 工作闭环\n\n"
+        "1. 结合现有证据列出本阶段计划、预算、完成条件和风险。\n"
+        "2. 选择价值最高且不受阻的任务连续执行，不停在列计划或报告状态。\n"
+        "3. 对实际产物运行必要检查，保留失败和反例。\n"
+        "4. 复盘完成项、证据、局限、当前阶段和下一步，更新 docs/DECISIONS.md。\n"
+        "5. 运行 contestflow plan 刷新阶段；仍在授权范围且没有阻塞时继续下一项。\n\n"
         "先读本工作区 AGENTS.md、contest.json、docs/DECISIONS.md，"
         "按团队已确定的目标和授权范围推进，常规工作不逐条询问。\n\n"
-        "阶段完成后交付可审阅的产物、证据、局限和待决策事项，"
-        "记录团队实际意见及下一步安排。需要新的关键判断时，"
-        "先准备有依据的选项，不把 AI 建议当作团队已经接受。\n\n"
-        "阶段建议只根据现有产物给出，不自动执行后续任务。"
-        "团队审阅以实际反馈为准，本文件不生成批准记录。\n\n"
+        "只有缺少会改变路线、指标或预算的团队判断，涉及付费、账户、不可逆或外部提交，"
+        "或工作区已经冻结时才暂停；暂停前先完成不依赖该决定的工作并给出有依据的选项。\n\n"
+        "本文件是 CLI 根据产物生成的工作提示；CLI 本身不执行任务。Agent 应在既有授权内主动推进，"
+        "但不能把 AI 建议、自动检查或授权执行写成团队已经接受或审定。\n\n"
         "CLI 不调用模型。候选论文、自动检查通过与字节冻结都不是可直接提交的证明；"
         "最终内容和实际提交由团队决定。\n"
     )

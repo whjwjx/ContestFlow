@@ -78,6 +78,24 @@ def _update_policy(root, mode):
     write_json(root / "contest.json", settings)
 
 
+def validate_target(root, mode):
+    """Fail before workspace creation when Git cannot safely own this exact path."""
+    if mode not in ("local", "team"):
+        raise FlowError("Repository initialization requires local or team mode")
+    root = Path(root).resolve()
+    git = resolve_tool("git", root)
+    probe = root
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    found = _top_level(git, probe)
+    if found is not None and not _same_path(found, root):
+        raise FlowError(
+            "Competition workspace is inside a different Git repository. "
+            "Use a separate directory or explicitly manage it as part of that repository; "
+            "ContestFlow will not create a nested repository."
+        )
+
+
 def enable(root, mode):
     """Initialize or adopt an exact-root repository; never create a nested repository."""
     if mode not in ("local", "team"):

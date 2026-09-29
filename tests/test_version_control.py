@@ -57,7 +57,7 @@ def test_nested_repository_is_rejected_without_changing_workspace_policy(tmp_pat
     parent = tmp_path / "parent"
     parent.mkdir()
     git(parent, "init", "--initial-branch=main")
-    root = parent / "contest"
+    root = parent / "new" / "contest"
     project.init(root)
 
     with pytest.raises(core.FlowError, match="inside a different Git repository"):
@@ -65,6 +65,31 @@ def test_nested_repository_is_rejected_without_changing_workspace_policy(tmp_pat
 
     assert not (root / ".git").exists()
     assert version_control.policy(root)["mode"] == "off"
+
+
+def test_git_precheck_does_not_leave_partial_new_workspace(tmp_path):
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    git(parent, "init", "--initial-branch=main")
+    root = parent / "contest"
+
+    with pytest.raises(core.FlowError, match="inside a different Git repository"):
+        project.init(root, git_mode="local")
+
+    assert not root.exists()
+
+
+def test_missing_git_does_not_leave_partial_new_workspace(tmp_path, monkeypatch):
+    root = tmp_path / "contest"
+
+    def missing(*_args, **_kwargs):
+        raise core.FlowError("git unavailable")
+
+    monkeypatch.setattr(version_control, "resolve_tool", missing)
+    with pytest.raises(core.FlowError, match="git unavailable"):
+        project.init(root, git_mode="local")
+
+    assert not root.exists()
 
 
 def test_team_mode_reports_remote_name_without_exposing_remote_url(tmp_path):
