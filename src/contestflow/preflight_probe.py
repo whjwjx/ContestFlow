@@ -127,11 +127,14 @@ def documents_probe(settings, pdf=False):
     details = {"pandoc": version, "artifacts": [target], "visual_review": "required"}
     if pdf:
         tex_version = run_tool([tools["xelatex"], "--version"]).stdout
+        from .paper_resources import font_settings
         from .reporting import paper_font_settings, preflight_pdf_engine_options
 
         paper = paper_font_settings(
-            settings.get("paper", {}), Path("sample.md").read_text(encoding="utf-8")
+            {"fontsize": "11pt", **settings.get("paper", {})},
+            Path("sample.md").read_text(encoding="utf-8"),
         )
+        font_settings(paper)
         cjk = paper["cjk_font"]
         argv += [
             "--pdf-engine=" + tools["xelatex"],
@@ -142,7 +145,7 @@ def documents_probe(settings, pdf=False):
             "geometry:margin=24mm",
         ]
         argv += preflight_pdf_engine_options(tools["xelatex"])
-        argv += ["-V", "fontsize=" + settings.get("paper", {}).get("fontsize", "11pt")]
+        argv += ["-V", "fontsize=" + paper["fontsize"]]
         main_font = settings.get("paper", {}).get("main_font")
         if main_font:
             argv += ["-V", "mainfont=" + main_font]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 import subprocess
 import sys
@@ -195,18 +196,59 @@ def package(root):
     return record
 
 
+def _finite_smoke_number(value):
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def smoke_settings(spec, manifest):
+    """Reject malformed execution settings before extracting files or starting code."""
+    if not isinstance(spec, dict) or not spec:
+        raise FlowError("Configure package.smoke.command and package.smoke.result first")
+    command = spec.get("command")
+    if (
+        not isinstance(command, list)
+        or not command
+        or any(not isinstance(arg, str) or not arg.strip() or "\0" in arg for arg in command)
+    ):
+        raise FlowError("Smoke command must be an argv list of nonempty strings")
+    result_name = spec.get("result", "smoke-result.json")
+    if not isinstance(result_name, str):
+        raise FlowError("Smoke result must be a safe relative file path")
+    safe_relative(result_name)
+    output = result_name.casefold()
+    reserved = [MANIFEST, "smoke.log", *manifest["members"]]
+    if any(
+        output == name.casefold()
+        or output.startswith(name.casefold() + "/")
+        or name.casefold().startswith(output + "/")
+        for name in reserved
+    ):
+        raise FlowError("Smoke output must be newly generated, not a packaged or reserved path")
+    timeout = spec.get("timeout_seconds", 60)
+    if not _finite_smoke_number(timeout) or not 0 < timeout <= 180:
+        raise FlowError("Smoke timeout_seconds must be a finite number in (0, 180]")
+    expected = spec.get("expected_metrics", {})
+    if not isinstance(expected, dict) or any(
+        not isinstance(name, str) or not name.strip() or not _finite_smoke_number(value)
+        for name, value in expected.items()
+    ):
+        raise FlowError("Smoke expected_metrics must map nonempty names to finite numbers")
+    tolerance = spec.get("tolerance", 1e-8)
+    if not _finite_smoke_number(tolerance) or tolerance < 0:
+        raise FlowError("Smoke tolerance must be a finite nonnegative number")
+    return command, result_name, timeout, expected, tolerance
+
+
 def smoke_archive(root, archive_path, manifest, allow_exec):
     spec = config(root)["package"].get("smoke")
-    if not spec:
-        raise FlowError("Configure package.smoke.command and package.smoke.result first")
+    command, result_name, timeout, expected, tolerance = smoke_settings(spec, manifest)
     if not allow_exec:
         raise FlowError("Package smoke runs code: review it and pass --allow-exec")
-    if not isinstance(spec.get("command"), list) or not spec["command"]:
-        raise FlowError("Smoke command must be an argv list")
-    result_name = spec.get("result", "smoke-result.json")
-    safe_relative(result_name)
-    if result_name in manifest["members"]:
-        raise FlowError("Smoke output must be newly generated, not a prepackaged result")
     with tempfile.TemporaryDirectory(prefix="contestflow-smoke-") as tmp:
         unpack = Path(tmp)
         with zipfile.ZipFile(archive_path) as archive:
@@ -215,8 +257,8 @@ def smoke_archive(root, archive_path, manifest, allow_exec):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(archive.read(name))
         argv = [
-            str(arg).replace("{python}", sys.executable).replace("{workspace}", str(unpack))
-            for arg in spec["command"]
+            arg.replace("{python}", sys.executable).replace("{workspace}", str(unpack))
+            for arg in command
         ]
         from .runner import kill_tree
 
@@ -224,22 +266,27 @@ def smoke_archive(root, archive_path, manifest, allow_exec):
         with (unpack / "smoke.log").open("wb") as log:
             proc = subprocess.Popen(argv, cwd=unpack, stdout=log, stderr=log, **options)
             try:
-                code = proc.wait(timeout=min(float(spec.get("timeout_seconds", 60)), 180))
-            except subprocess.TimeoutExpired as exc:
+                try:
+                    code = proc.wait(timeout=timeout)
+                except subprocess.TimeoutExpired as exc:
+                    raise FlowError("Actual-package smoke timed out") from exc
+                if code:
+                    raise FlowError(
+                        "Actual-package smoke failed: "
+                        + (unpack / "smoke.log").read_text(errors="replace")[-2000:]
+                    )
+                result = result_valid(read_json(local(unpack, result_name)))
+                for name, value in expected.items():
+                    if (
+                        name not in result["metrics"]
+                        or abs(result["metrics"][name] - value) > tolerance
+                    ):
+                        raise FlowError("Actual-package smoke metric mismatch")
+            except BaseException:
+                # Includes unexpected wait errors and Ctrl+C. Keep the runner's
+                # preflight session policy, so descendants cannot outlive the probe.
                 kill_tree(proc)
-                raise FlowError("Actual-package smoke timed out") from exc
-        if code:
-            raise FlowError(
-                "Actual-package smoke failed: "
-                + (unpack / "smoke.log").read_text(errors="replace")[-2000:]
-            )
-        result = result_valid(read_json(local(unpack, result_name)))
-        expected = spec.get("expected_metrics", {})
-        for name, value in expected.items():
-            if name not in result["metrics"] or abs(result["metrics"][name] - value) > float(
-                spec.get("tolerance", 1e-8)
-            ):
-                raise FlowError("Actual-package smoke metric mismatch")
+                raise
     return {
         "status": "passed",
         "result": result,

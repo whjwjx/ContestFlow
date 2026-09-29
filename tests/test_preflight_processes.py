@@ -163,10 +163,18 @@ def test_pdf_build_uses_shared_font_and_preflight_engine_options(
 ):
     root = tmp_path / "workspace"
     project.init(root, "Test paper")
-    context = {"selection": {"table_style": "plain"}}
+    context = {
+        "selection": {"table_style": "plain"},
+        "inputs": reporting.paper_resources.input_snapshot(root),
+    }
     monkeypatch.setattr(reporting, "paper_context", lambda root: context)
-    monkeypatch.setattr(reporting, "resolved_markdown", lambda root: text)
+    monkeypatch.setattr(reporting, "resolved_markdown", lambda root, *args: text)
     monkeypatch.setattr(reporting, "pandoc_path", lambda root: "chosen-pandoc")
+    monkeypatch.setattr(
+        reporting.paper_resources,
+        "prepare_document",
+        lambda root, stage, *args: (stage / "approved.json", stage / "pandoc-data"),
+    )
     monkeypatch.setattr(reporting, "resolve_tool", lambda name, root: "chosen-xelatex")
     monkeypatch.setattr(reporting.platform, "system", lambda: "Windows")
     monkeypatch.setattr(
@@ -188,3 +196,34 @@ def test_pdf_build_uses_shared_font_and_preflight_engine_options(
     assert ("CJKmainfont=Microsoft YaHei" in commands[0]) is chinese
     assert "--pdf-engine-opt=-disable-installer" in commands[0]
     assert "--pdf-engine=chosen-xelatex" in commands[0]
+
+
+@pytest.mark.parametrize(
+    "paper_settings",
+    [
+        {"fontsize": "12pt}\\input{outside}"},
+        {"main_font": "Font}\\input{outside}"},
+        {"cjk_font": "C:/fonts/font.ttf"},
+        {"fontsize": ["11pt"]},
+    ],
+)
+def test_document_probe_rejects_unsafe_font_settings_before_compilation(
+    tmp_path, monkeypatch, paper_settings
+):
+    from contestflow import preflight_probe
+
+    monkeypatch.chdir(tmp_path)
+    calls = []
+
+    def run_tool(argv):
+        calls.append(argv)
+        assert argv[-1] == "--version", "No compilation may run for invalid settings"
+        return SimpleNamespace(stdout="tool version", stderr="", returncode=0)
+
+    monkeypatch.setattr(preflight_probe, "run_tool", run_tool)
+    with pytest.raises(core.FlowError):
+        preflight_probe.documents_probe(
+            {"tools": {"pandoc": "pandoc", "xelatex": "xelatex"}, "paper": paper_settings},
+            pdf=True,
+        )
+    assert len(calls) == 2

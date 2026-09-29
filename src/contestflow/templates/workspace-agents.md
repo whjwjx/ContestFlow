@@ -14,7 +14,7 @@
 
 ## 资源复用与环境准备
 
-赛前或更换机器、工具版本后，先运行 `contestflow doctor .`，读取 `configs/preflight.json` 和 `configs/resources.json`，按所选能力运行 `contestflow preflight . --level functional`；需要整链演练时选 `full-html` 或 `full-pdf` 并用 `--level rehearsal`。这些功能检查运行固定合成样例，不运行本比赛代码，也不证明建模或提交已完成。
+赛前或更换机器、工具版本后，先运行 `contestflow doctor .`，读取 `configs/preflight.json` 和 `configs/resources.json`，按所选能力运行 `contestflow preflight . --level functional`；需要整链演练时选 `full-html` 或 `full-pdf` 并用 `--level rehearsal`。用户只要求盘点时使用 `--level inventory`，不自行扩大到执行样例。上述功能检查运行固定合成样例，不运行本比赛代码，也不证明建模或提交已完成。
 
 工具不在默认目录时，先用 `contestflow tools .` 自动发现；明确路径记入 `tools.local.json`，跨比赛可用用户级 tools 配置。失效或多个候选时说明实际发现与差异，再请团队选择。机器路径、日志和报告留在本地，报告目录推荐 `.contestflow/preflight/<本次名称>`。
 

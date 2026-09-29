@@ -39,7 +39,7 @@ GROUPS = {
         "fix": "Install the documents extra or configure the Pandoc executable.",
     },
     "documents-pdf": {
-        "packages": {"pypdf": "5"},
+        "packages": {"pypdf": "6.19"},
         "tools": ["pandoc", "xelatex"],
         "fix": "Configure Pandoc/XeLaTeX and paper.cjk_font; check TeX packages and fonts.",
     },

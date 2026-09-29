@@ -1,0 +1,53 @@
+name: Test and audit
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install isolated test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[science,documents,dev]"
+          python -m pip check
+      - name: Test and lint
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests scripts
+          python -m ruff format --check src tests scripts
+      - name: Build and inspect distributions
+        run: |
+          python -m build --outdir output/ci-dist
+          python scripts/check_release_artifacts.py output/ci-dist
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -e ".[science,documents,dev,audit]"
+      - name: Audit all resolved third-party dependencies
+        run: |
+          python -m pip freeze --exclude-editable --all > audit-requirements.txt
+          python -m pip_audit --strict --disable-pip --no-deps -r audit-requirements.txt

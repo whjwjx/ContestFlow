@@ -23,7 +23,7 @@ def environment():
             "numpy": "2.2.0",
             "scipy": "1.16.0",
             "matplotlib": "3.10.0",
-            "pypdf": "6.0.0",
+            "pypdf": "6.19.0",
             "pypandoc": "1.15",
         },
         "tools": {name: "/not/executed/" + name for name in names},
