@@ -9,7 +9,7 @@ description: 使用 ContestFlow 辅助团队开展数模比赛的赛前准备、
 
 ## 定位当前任务
 
-1. 先辨认用户要处理的比赛工作区和本阶段目标。已有工作区读取 `AGENTS.md`、`contest.json`、`docs/DECISIONS.md`、`docs/AI_TASK.md`，使用 `status` / `next` 核对产物状态；目录中存在 `deliverables/FROZEN.json` 时保持冻结文件只读。
+1. 先辨认用户要处理的比赛工作区和本阶段目标。包含 `contest.json` 的目录才是比赛工作区；用绝对路径运行 `contestflow repo WS`，`local` / `team` 模式须确认 `status: ready`、`root_matches: true` 且仓库顶层就是 `WS`。不得依据当前终端或工具包源码位置猜测。已有工作区读取 `AGENTS.md`、`docs/DECISIONS.md`、`docs/AI_TASK.md`，使用 `status` / `next` 核对产物状态；目录中存在 `deliverables/FROZEN.json` 时保持冻结文件只读。
 2. 定位安装了 `contestflow-local` 的 Python 环境，优先使用用户指定环境或项目已有虚拟环境。用该环境的 `python -m contestflow --version` 核对可用性；CLI 不在 PATH 时继续使用该解释器或虚拟环境中命令的绝对路径。skill 目录不等于工具源码目录，也不等于比赛工作区。
 3. 软件未安装、首次准备比赛或工具路径有问题时，只读下方环境指南。已有环境和授权可沿用；不重复安装或重新初始化已有比赛。
 4. 执行当前任务需要的操作，按下方阶段读取对应指南，不一次加载所有参考文件。
@@ -17,7 +17,7 @@ description: 使用 ContestFlow 辅助团队开展数模比赛的赛前准备、
 | 当前需要 | 读取指南 |
 | --- | --- |
 | 安装、环境与非默认目录发现、预检、工具和配色复用 | [准备与复用](references/setup-and-resources.md) |
-| 导入题面、读题建模、实验适配与证据比较 | [研究与证据](references/research-and-evidence.md) |
+| 比赛仓库、团队分支、导入题面、读题建模、实验适配与证据比较 | [研究与证据](references/research-and-evidence.md) |
 | 图表审阅、论文构建、候选包复现与冻结 | [论文与交付](references/paper-and-delivery.md) |
 
 ## 按团队范围推进

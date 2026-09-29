@@ -39,12 +39,14 @@ def template(name):
     return files("contestflow").joinpath("templates", name).read_text(encoding="utf-8")
 
 
-def init(root: Path, title="New competition"):
+def init(root: Path, title="New competition", git_mode="off"):
     if root.exists() and any(root.iterdir()):
         raise FlowError(f"Refusing to initialize a nonempty directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
     for name in DIRECTORIES:
         local(root, name).mkdir(parents=True, exist_ok=True)
+    from .version_control import default_policy
+
     write_json(
         root / "contest.json",
         {
@@ -66,6 +68,7 @@ def init(root: Path, title="New competition"):
                 "require_pdf": True,
                 "private_markers": [],
             },
+            "version_control": default_policy(git_mode),
         },
     )
     write_json(root / "configs/experiments.json", {"schema_version": 1, "experiments": []})
@@ -101,11 +104,24 @@ def init(root: Path, title="New competition"):
     )
     write_text(
         root / ".gitignore",
-        "materials/\ndata/\nruns/\nreviews/\ndeliverables/\n.venv/\n.env*\n*.local.json\n.contestflow/\n",
+        "materials/\ndata/\nruns/\nreviews/\ndeliverables/\n.venv/\n.env*\n"
+        "*.local.json\n.contestflow/\n.contestflow.lock\n",
     )
+    if git_mode != "off":
+        from .version_control import enable
+
+        repository = enable(root, git_mode)
+    else:
+        from .version_control import inspect
+
+        repository = inspect(root)
     journal(root, "init", {"title": title})
     plan(root)
-    return {"workspace": str(root), "next": str(root / "docs/AI_TASK.md")}
+    return {
+        "workspace": str(root),
+        "next": str(root / "docs/AI_TASK.md"),
+        "repository": repository,
+    }
 
 
 def doctor(root=None):
@@ -227,6 +243,8 @@ def plan(root: Path):
 
 
 def status(root: Path):
+    from .version_control import inspect
+
     settings = config(root)
     return {
         "title": settings["title"],
@@ -235,6 +253,7 @@ def status(root: Path):
         "platform_submission": "not_observed",
         "human_review": "not_asserted",
         "collaboration_mode": "team_led",
+        "repository": inspect(root),
         "note": "阶段来自文件状态，仅供安排工作；自动检查、候选包和冻结均不代表团队已审定或可直接提交。",
     }
 
