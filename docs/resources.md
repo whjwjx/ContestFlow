@@ -5,17 +5,18 @@
 ## 查看和选择
 
 ```powershell
+$ContestWorkspace = "D:\contests\my-contest"
 contestflow resources
-contestflow resources workspaces/my-contest
-contestflow resources workspaces/my-contest --select tool.numpy tool.matplotlib palette.project-p7
-contestflow preflight workspaces/my-contest
+contestflow resources $ContestWorkspace
+contestflow resources $ContestWorkspace --select tool.numpy tool.matplotlib palette.project-p7
+contestflow preflight $ContestWorkspace
 ```
 
 未激活环境时使用 `.venv\Scripts\contestflow.exe`；Linux/macOS 为 `.venv/bin/contestflow`。
 
 `--select` 写入本次**完整选择**，不是追加。顺序决定绘图候选配色顺序；初次生成图表时，默认采用首套配色的柱形图，并标记 `automatic-default` / `human_review: not_asserted`。该默认值不代表团队已经看过图。
 
-- `configs/resources.json`：本次显式选择的资源 ID，可共享；执行 `contestflow resources workspaces/my-contest --select` 可清空显式选择。
+- `configs/resources.json`：本次显式选择的资源 ID，可共享；执行 `contestflow resources $ContestWorkspace --select` 可清空显式选择。
 - `configs/resource-library.json`：项目自定义资源，可复制到下一场比赛，也可随项目分享。
 - 工具实际安装路径与本机版本不写在资源定义中；本机路径由工具发现配置管理，实际版本和功能检查结果由预检报告记录。
 
@@ -62,7 +63,7 @@ P6 的历史来源记录指向 [Paul Tol 的说明](https://sronpersonalpages.nl
 }
 ```
 
-然后执行 `contestflow resources workspaces/my-contest --select palette.team-three`。这份定义本身就是可移植的最小配色示例；使用教学工作区的合成底表可以预览效果。
+然后执行 `contestflow resources $ContestWorkspace --select palette.team-three`。这份定义本身就是可移植的最小配色示例；使用教学工作区的合成底表可以预览效果。
 
 字段约定：
 

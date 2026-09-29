@@ -174,6 +174,8 @@ def kill_tree(process):
 
 
 def run_one(root: Path, spec, force=False):
+    from .version_control import provenance
+
     previous = latest(root, spec)
     if previous["status"] == "success" and not force:
         return {**previous, "reused": True}
@@ -197,6 +199,7 @@ def run_one(root: Path, spec, force=False):
         "attempt": attempt,
         "fingerprint": key,
         "context": context,
+        "repository": provenance(root),
         "started_at": now(),
         "command": argv,
         "status": "running",

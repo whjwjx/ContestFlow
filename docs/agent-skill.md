@@ -6,13 +6,13 @@ ContestFlow 提供协作 skill 和 Python CLI 两部分：skill 帮助 Agent 判
 
 1. 按仓库 README 安装 `contestflow-local` 到独立 Python 环境，核对该环境的 `python -m contestflow --version`。科学计算、文稿转换与系统 PDF 工具按本次需要准备。
 2. 按所用 Agent 的 skill 安装方式，将完整的 [`skills/contestflow`](../skills/contestflow/SKILL.md) 目录复制或注册到其支持的位置。保留 `SKILL.md`、`references/` 与 `agents/` 的相对关系；不要只复制主文件。安装位置由宿主决定，本仓库不自动改写用户全局 skill 目录。
-3. 告知 Agent 比赛工作区、题面来源和已经确定的阶段范围。CLI 若不在 PATH，提供安装环境或解释器路径；工具的其他非默认目录交给 `doctor` / `tools` 发现。
+3. 告知 Agent 比赛工作区绝对路径、题面来源、Git 模式和已经确定的阶段范围。CLI 若不在 PATH，提供安装环境或解释器路径；工具的其他非默认目录交给 `doctor` / `tools` 发现。Agent 会用 `contestflow repo <工作区>` 核对 `contest.json` 与 Git 顶层，避免误改工具包或另一场比赛。
 
 支持 SKILL.md 的宿主可加载该目录；不支持 skill 自动发现的 Agent，也可由用户明确要求阅读入口文件。`agents/openai.yaml` 提供可选的界面元数据，默认保持自动发现；是否自动选择及调用方式由宿主能力决定。不要假定所有 Agent 都支持同一种安装路径或调用语法。
 
 启动示例：
 
-> 使用 ContestFlow skill。比赛工作区为 `<路径>`，题面为 `<材料路径>`。先核对环境并整理逐问要求、约束、评价口径和材料缺口，给出需要团队判断的路线选项。暂不展开正式模型与整篇论文。
+> 使用 ContestFlow skill。比赛工作区为 `<绝对路径>`，题面为 `<材料路径>`，Git 使用 `local` 模式。先核对仓库与环境，再整理逐问要求、约束、评价口径和材料缺口，给出需要团队判断的路线选项。暂不展开正式模型与整篇论文。
 
 继续已有阶段：
 
