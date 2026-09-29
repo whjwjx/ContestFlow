@@ -12,6 +12,14 @@
 3. `src/` 放题目算法，`configs/experiments.json` 登记任务，`evidence/metrics.json` 定义口径。`runs/` 留存失败、超时和原始结果。
 4. `paper/draft.md` 是唯一正文源，`evidence/` 是结果依据，`reviews/` 放图表选择，`deliverables/` 放候选成品。
 
+## 资源复用与环境准备
+
+赛前或更换机器、工具版本后，先运行 `contestflow doctor .`，读取 `configs/preflight.json` 和 `configs/resources.json`，按所选能力运行 `contestflow preflight . --level functional`；需要整链演练时选 `full-html` 或 `full-pdf` 并用 `--level rehearsal`。这些功能检查运行固定合成样例，不运行本比赛代码，也不证明建模或提交已完成。
+
+工具不在默认目录时，先用 `contestflow tools .` 自动发现；明确路径记入 `tools.local.json`，跨比赛可用用户级 tools 配置。失效或多个候选时说明实际发现与差异，再请团队选择。机器路径、日志和报告留在本地，报告目录推荐 `.contestflow/preflight/<本次名称>`。
+
+可复用配色与工具从 `contestflow resources .` 选择；自定义来源、用途、依赖和复用说明写入 `configs/resource-library.json`。选色不等于审定图表含义。新依赖和资源纳入后补做相应预检；赛后记录真正有效的配置、最小示例与失败经验。
+
 ## 按阶段协作
 
 | 阶段 | 团队判断 | AI 在授权范围内完成 |

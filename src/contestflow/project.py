@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
-import platform
-import shutil
-import sys
 from importlib.resources import files
 from pathlib import Path
 
@@ -73,6 +69,8 @@ def init(root: Path, title="New competition"):
         },
     )
     write_json(root / "configs/experiments.json", {"schema_version": 1, "experiments": []})
+    write_json(root / "configs/preflight.json", {"schema_version": 1, "profile": "core"})
+    write_json(root / "configs/resources.json", {"schema_version": 1, "selected": []})
     write_json(root / "plans/requirements.json", {"schema_version": 1, "items": []})
     write_json(root / "evidence/metrics.json", {"schema_version": 1, "metrics": {}})
     write_text(root / "AGENTS.md", template("workspace-agents.md"))
@@ -103,26 +101,17 @@ def init(root: Path, title="New competition"):
     )
     write_text(
         root / ".gitignore",
-        "materials/\ndata/\nruns/\nreviews/\ndeliverables/\n.venv/\n.env*\n*.local.json\n",
+        "materials/\ndata/\nruns/\nreviews/\ndeliverables/\n.venv/\n.env*\n*.local.json\n.contestflow/\n",
     )
     journal(root, "init", {"title": title})
     plan(root)
     return {"workspace": str(root), "next": str(root / "docs/AI_TASK.md")}
 
 
-def doctor():
-    packages = {
-        name: importlib.util.find_spec(name) is not None
-        for name in ("numpy", "scipy", "matplotlib", "pypdf", "pypandoc")
-    }
-    return {
-        "python": sys.version,
-        "executable": sys.executable,
-        "platform": platform.platform(),
-        "packages": packages,
-        "tools": {n: shutil.which(n) for n in ("pandoc", "xelatex", "git", "nvidia-smi")},
-        "note": "Read-only. GPU and document dependencies are optional; nothing was installed.",
-    }
+def doctor(root=None):
+    from .preflight import inventory
+
+    return inventory(root)
 
 
 def _artifact_stage(root: Path):

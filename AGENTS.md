@@ -6,7 +6,7 @@
 
 默认先完成当前阶段的具体工作，提供团队能审阅的成果。收到题面本身不表示已经选定模型或授权一路完成论文。根据用户已经明确的目标和授权范围执行，已授权的常规工作不要反复询问。
 
-1. 查看 README 和 `docs/adapter-guide.md`，检查 Python 和依赖。优先用项目 `.venv`；缺失依赖按任务最小范围安装，不能升级用户全局环境。
+1. 查看 README 和 `docs/adapter-guide.md`，检查 Python 和依赖。优先用项目 `.venv`；缺失依赖按任务最小范围安装，不能升级用户全局环境。 使用 doctor/tools 自动发现实际工具路径，再按所选资源运行 preflight；非默认目录先查本机配置、环境和有限补充目录，只有缺失或多候选无法决定时再询问。预检通过只说明所选小样例能运行，不能代替题目验证。
 2. 为本次比赛选择新的 `workspaces/<名称>`，执行 `contestflow start <目录> --materials <题面路径>`。已有目录先检查状态，不覆盖重来。
 
 竞赛阶段的 `src/`、`paper/` 等相对路径均指该工作区，不是工具包源码目录。未激活虚拟环境时，从工具库根目录使用 `.venv/Scripts/contestflow.exe <命令> <工作区>`（Windows）或 `.venv/bin/contestflow`（Linux/macOS），不要假定命令已在 PATH 中。

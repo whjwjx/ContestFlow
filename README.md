@@ -16,6 +16,7 @@
 
 | 阶段 | 团队主要判断 | AI 辅助与可审阅成果 |
 |---|---|---|
+| 赛前准备 | 选择本次工具、呈现方式和所需能力 | 资源复用、环境发现、小样例检查和流程预演 |
 | 读题与选题 | 小问理解、约束、评价口径与任务取舍 | 材料索引、逐问要求表、歧义和待决策清单 |
 | 建模与计划 | 模型假设、方法适用性、实验预算与停止条件 | 候选路线、文献依据、推导草稿与可行性比较 |
 | 实现与实验 | 基线是否合理、验证是否充分、是否继续投入 | 核心代码、合法性检查、可复现实验与失败记录 |
@@ -44,6 +45,20 @@ Linux/macOS 使用 `.venv/bin/python` 和 `.venv/bin/contestflow`。核心命令
 接下来让 AI 读取生成的 `workspaces/my-contest/AGENTS.md` 与 `docs/AI_TASK.md`，整理读题包。既有比赛不会被重新初始化覆盖；原件按哈希复制，导入代码不执行。
 
 升级工具后，已有工作区的 `AGENTS.md` 不会自动更新。请阅读并合并新版协作原则，再用 `contestflow plan <工作区>` 刷新生成的 `docs/AI_TASK.md`；团队决定等已有记录应保留，无需重新 `init` 旧工作区。
+
+## 复用资源与赛前准备
+
+先用 [资源库](docs/resources.md) 保存工具来源、用途、依赖和配色定义，再按本次选择进行 [环境预检](docs/preflight.md)。资源可以跨比赛复用，本机安装路径单独保存在忽略的本机配置中。
+
+~~~powershell
+.\.venv\Scripts\contestflow doctor
+.\.venv\Scripts\contestflow resources workspaces/my-contest --select tool.numpy tool.matplotlib palette.project-p7
+.\.venv\Scripts\contestflow preflight workspaces/my-contest --profile full-html --level rehearsal --output .contestflow/preflight/first-rehearsal
+~~~
+
+`doctor` 只盘点；`preflight` 支持盘点、实际小样例验证和独立合成流程演练。已选择的资源自动加入所需检查，未选择的 GPU 等能力不算缺项。完整 PDF 演练可使用 `full-pdf`；生成的图、文档仍需实际打开审阅。检查结果明确区分通过、失败、缺失、未验证和本次不需要。
+
+工具定位先用明确配置，再查当前环境、PATH、包内工具和有限的补充目录。非默认安装可用 `contestflow tools --set pandoc "D:\My Tools\Pandoc\pandoc.exe"` 记住；失效配置会报告原因，多个补充候选会列出供选择，不静默改换版本。预检和论文构建共用定位逻辑。
 
 ## 用教学示例了解工具链
 
@@ -99,7 +114,7 @@ contestflow freeze PATH --confirm
 
 Markdown 支持 `{{metric:实验ID:指标名}}`、`{{table:comparison}}` 和 `{{figures}}`，构建时从有效底表替换。未运行成功、证据过期、未知指标或 `TODO` 占位会阻止构建。团队仍须核对手写数字、数学推导、文献来源和结论适用范围；自动检查只覆盖已实现的规则。
 
-中文 PDF 在 `contest.json` 的 `paper.cjk_font` 填已安装字体名，规则优先于个人偏好。PDF/HTML 共享正文，版式仍需分别检查。图表提供两种适合标量比较的图型、三套配色及两种表格样式；复杂流程图、分布和配对分析需按题目另行实现，并说明数据依据。
+中文 PDF 在 `contest.json` 的 `paper.cjk_font` 填已安装字体名，规则优先于个人偏好。PDF/HTML 共享正文，版式仍需分别检查。图表提供两种适合标量比较的图型、默认三套配色，另可选择资源库中的 P6/P7 子集或自定义配色及两种表格样式；复杂流程图、分布和配对分析需按题目另行实现，并说明数据依据。
 
 AI 参与了路线建议、核心代码、分析或保留文本时，应按实际使用与当届规则记录和披露。团队主导描述的是决策与核验责任，不能据此淡化 AI 已经完成的工作。工具不预填未经核实的模型名、版本发布日期或人工审阅结论。
 

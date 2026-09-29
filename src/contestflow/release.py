@@ -26,9 +26,17 @@ from .core import (
 )
 from .evidence import require_evidence
 from .reporting import paper_current
-from .runner import result_valid
+from .runner import child_process_options, result_valid
 
-FORBIDDEN_PARTS = {".git", ".venv", "__pycache__", "materials", "reviews", "deliverables"}
+FORBIDDEN_PARTS = {
+    ".contestflow",
+    ".git",
+    ".venv",
+    "__pycache__",
+    "materials",
+    "reviews",
+    "deliverables",
+}
 MANIFEST = "MANIFEST.json"
 
 
@@ -210,15 +218,9 @@ def smoke_archive(root, archive_path, manifest, allow_exec):
             str(arg).replace("{python}", sys.executable).replace("{workspace}", str(unpack))
             for arg in spec["command"]
         ]
-        import os
-
         from .runner import kill_tree
 
-        options = (
-            {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-            if os.name == "nt"
-            else {"start_new_session": True}
-        )
+        options = child_process_options()
         with (unpack / "smoke.log").open("wb") as log:
             proc = subprocess.Popen(argv, cwd=unpack, stdout=log, stderr=log, **options)
             try:
