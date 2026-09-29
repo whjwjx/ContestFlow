@@ -26,11 +26,13 @@ ContestFlow 面向团队主导的数模协作：团队作出研究与提交判�
 | `action` | 根据已有产物推荐的后续任务 |
 | `automatic` | 该任务类型是否可辅助执行；不代表取得了团队授权 |
 | `collaboration_mode` | 当前为 `team_led`，表达团队主导的协作约定 |
-| `guidance_only` | 当前为 `true`，建议本身不会执行下一阶段 |
+| `guidance_only` | 当前为 `true`，表示 CLI 只生成提示；不要求 Agent 停止等待 |
+| `agent_execution` | `proactive_within_scope`，要求 Agent 在已有范围内主动形成工作闭环 |
+| `continue_when_unblocked` | 未冻结时为 `true`，提示 Agent 完成复盘后继续不受阻的下一项 |
 | `team_focus` | 当前阶段需要团队判断或审阅的事项 |
 | `human_review` | 当前为 `not_asserted`，工具未声称团队已经审阅 |
 
-协作字段以兼容方式追加，`schema_version` 仍为 1。技术进度可以推进，`human_review` 不会因此自动变成“已审阅”；`status` 同样不根据文件状态推断人工审阅。这些字段用于解释任务边界，当前没有基于身份的签认、可信签名或强制人工审核门禁。
+协作字段以兼容方式追加，`schema_version` 仍为 1。Agent 按“规划、执行、验证、复盘、继续”推进；CLI 只保存提示与产物状态。技术进度可以推进，`human_review` 不会因此自动变成“已审阅”；当前没有基于身份的签认、可信签名或强制人工审核门禁。
 
 ## 证据与状态
 

@@ -106,6 +106,8 @@ def test_cli_start_does_not_invent_solution(tmp_path, capsys):
     assert data["next"]["stage"] == "analysis"
     assert data["next"]["collaboration_mode"] == "team_led"
     assert data["next"]["guidance_only"] is True
+    assert data["next"]["agent_execution"] == "proactive_within_scope"
+    assert data["next"]["continue_when_unblocked"] is True
     assert data["next"]["human_review"] == "not_asserted"
     assert data["next"]["team_focus"]
     assert core.read_json(root / "plans/requirements.json")["items"] == []
@@ -132,3 +134,6 @@ def test_refresh_guidance_preserves_existing_team_records(workspace):
     assert before == core.snapshot(workspace, ["AGENTS.md", "docs/DECISIONS.md"])
     assert core.read_json(workspace / "plans/current.json")["team_focus"] == step["team_focus"]
     assert step["human_review"] == "not_asserted"
+    task = (workspace / "docs/AI_TASK.md").read_text(encoding="utf-8")
+    assert "Agent 工作闭环" in task
+    assert "不停在列计划或报告状态" in task
