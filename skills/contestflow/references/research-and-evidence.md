@@ -4,12 +4,14 @@
 
 ## 开始或继续比赛
 
+下表中的 `MODE` 取 `local` 或 `team`：
+
 | 命令 | 前置条件与产物 |
 | --- | --- |
-| `contestflow init WS --git-mode local|team` | 目录为空或不存在；建立通用工作区和与 `WS` 完全一致的 Git 根，不填真实题目答案 |
-| `contestflow start WS --materials MATERIALS --git-mode local|team` | 为新工作区初始化并导入；已有工作区先核对身份、状态和是否确需再次导入 |
+| `contestflow init WS --git-mode MODE` | 目录为空或不存在；建立通用工作区和与 `WS` 完全一致的 Git 根，不填真实题目答案 |
+| `contestflow start WS --materials MATERIALS --git-mode MODE` | 为新工作区初始化并导入；已有工作区先核对身份、状态和是否确需再次导入 |
 | `contestflow repo WS` | 只读核对准确工作区、Git 顶层、当前分支、提交及远端名称；不显示远端 URL |
-| `contestflow repo WS --init local|team` | 为已有工作区启用对应策略；发现父仓库时拒绝创建嵌套仓库 |
+| `contestflow repo WS --init MODE` | 为已有工作区启用对应策略；发现父仓库时拒绝创建嵌套仓库 |
 | `contestflow intake WS --materials MATERIALS` | 向已有可写工作区导入材料与原件索引，不执行附件代码 |
 | `contestflow status WS` / `contestflow next WS` | 只读产物状态和阶段建议，不触发下一阶段 |
 | `contestflow plan WS` | 更新 `docs/AI_TASK.md` 和 `plans/current.json`，不覆盖团队决定或既有 AGENTS |
@@ -61,4 +63,4 @@ contestflow compare WS
 
 `run` 写独立运行记录及日志，哈希和指纹一致的成功结果可复用；失败或过期结果不能当作当前证据。`--force` 强制重跑，只有结果确需重算时使用。`compare` 重算有效底表并更新证据。查看失败原因与算法合法性，不以修改记录状态或重新签哈希绕过检查。
 
-阶段结束交付可运行方法、实际命令、成功与失败记录、独立验证结果和结论边界。工具可以发现登记证据不一致，不能证明数学推导、数据质量、实验设计或模型泛化成立。按实际反馈记录团队决定，再按任务需要更新 `plan`。
+阶段结束交付可运行方法、实际命令、成功与失败记录、独立验证结果和结论边界。工具可以发现登记证据不一致，不能证明数学推导、数据质量、实验设计或模型泛化成立。记录阶段复盘并更新 `plan`；仍在授权范围且没有阻塞时直接继续下一项。
