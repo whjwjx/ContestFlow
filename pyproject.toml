@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "contestflow-local"
 version = "0.1.0"
-description = "Evidence-first, AI-ready mathematical modeling competition workflows"
+description = "Team-led, AI-assisted mathematical modeling competition workflows"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

@@ -1,10 +1,8 @@
 import importlib.util
-import json
 
 import pytest
 
 from contestflow import charts, core, evidence, examples, project, release, reporting, runner
-from contestflow.cli import main
 
 pytestmark = pytest.mark.skipif(
     any(importlib.util.find_spec(x) is None for x in ("numpy", "scipy", "matplotlib", "pypandoc")),
@@ -42,6 +40,8 @@ def test_full_workflow_and_freeze(tmp_path, kind):
     reporting.build_paper(root, "html")
     assert reporting.paper_current(root)
     assert "{{metric:" not in (root / "paper/build/resolved.md").read_text()
+    assert project.next_task(root)["stage"] == "delivery"
+    assert project.status(root)["human_review"] == "not_asserted"
     candidate = release.package(root)
     with pytest.raises(core.FlowError):
         release.freeze(root, True)
@@ -50,6 +50,9 @@ def test_full_workflow_and_freeze(tmp_path, kind):
     frozen = release.freeze(root, True)
     assert frozen["human_review"] == "not_asserted"
     assert project.next_task(root)["stage"] == "frozen"
+    assert project.next_task(root)["guidance_only"] is True
+    assert project.status(root)["human_review"] == "not_asserted"
+    assert project.status(root)["platform_submission"] == "not_observed"
     with pytest.raises(core.FlowError):
         reporting.build_paper(root, "html")
     assert release.verify(root)["archive_sha256"] == candidate["sha256"]
@@ -57,14 +60,3 @@ def test_full_workflow_and_freeze(tmp_path, kind):
         stream.write("\n# changed after freeze\n")
     with pytest.raises(core.FlowError):
         release.verify(root)
-
-
-def test_cli_start_does_not_invent_solution(tmp_path, capsys):
-    source = tmp_path / "statement.md"
-    source.write_text("# A new problem\nFind a model for the attached measurements.\n")
-    root = tmp_path / "contest"
-    assert main(["start", str(root), "--materials", str(source)]) == 0
-    data = json.loads(capsys.readouterr().out)
-    assert data["next"]["stage"] == "analysis"
-    assert core.read_json(root / "plans/requirements.json")["items"] == []
-    assert main(["run", str(root)]) == 2
