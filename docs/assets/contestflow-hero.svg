@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">ContestFlow workflow overview</title>
+  <desc id="desc">A human-led workflow from preparation and research to evidence, paper, and delivery.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1220"/>
+      <stop offset="0.55" stop-color="#111C31"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2DD4BF"/>
+      <stop offset="0.5" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-30%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#020617" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="430" rx="28" fill="url(#bg)"/>
+  <circle cx="1080" cy="35" r="190" fill="#2563EB" opacity="0.08"/>
+  <circle cx="80" cy="410" r="220" fill="#14B8A6" opacity="0.07"/>
+  <path d="M0 250 C240 190 420 300 650 238 C845 186 1000 206 1200 145" fill="none" stroke="#93C5FD" stroke-opacity="0.08" stroke-width="2"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif" text-anchor="middle">
+    <text x="600" y="48" fill="#5EEAD4" font-size="13" font-weight="700" letter-spacing="3">LOCAL-FIRST · HUMAN-LED · AGENT-ORIENTED</text>
+    <text x="600" y="115" fill="#F8FAFC" font-size="54" font-weight="750">ContestFlow</text>
+    <text x="600" y="153" fill="#CBD5E1" font-size="19">Mathematical modeling workflow with reviewable evidence at every stage</text>
+  </g>
+
+  <rect x="110" y="198" width="980" height="4" rx="2" fill="url(#accent)" opacity="0.8"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif" text-anchor="middle" filter="url(#shadow)">
+    <g transform="translate(70 235)">
+      <rect width="180" height="105" rx="18" fill="#101E32" stroke="#2DD4BF" stroke-opacity="0.75"/>
+      <circle cx="90" cy="0" r="18" fill="#2DD4BF"/>
+      <text x="90" y="6" fill="#082F2B" font-size="17" font-weight="800">01</text>
+      <text x="90" y="48" fill="#F1F5F9" font-size="17" font-weight="700">PREPARE</text>
+      <text x="90" y="76" fill="#94A3B8" font-size="13">tools · resources · preflight</text>
+    </g>
+    <g transform="translate(290 235)">
+      <rect width="180" height="105" rx="18" fill="#101E32" stroke="#38BDF8" stroke-opacity="0.75"/>
+      <circle cx="90" cy="0" r="18" fill="#38BDF8"/>
+      <text x="90" y="6" fill="#082F49" font-size="17" font-weight="800">02</text>
+      <text x="90" y="48" fill="#F1F5F9" font-size="17" font-weight="700">RESEARCH</text>
+      <text x="90" y="76" fill="#94A3B8" font-size="13">questions · routes · decisions</text>
+    </g>
+    <g transform="translate(510 235)">
+      <rect width="180" height="105" rx="18" fill="#101E32" stroke="#60A5FA" stroke-opacity="0.75"/>
+      <circle cx="90" cy="0" r="18" fill="#60A5FA"/>
+      <text x="90" y="6" fill="#172554" font-size="17" font-weight="800">03</text>
+      <text x="90" y="48" fill="#F1F5F9" font-size="17" font-weight="700">EVIDENCE</text>
+      <text x="90" y="76" fill="#94A3B8" font-size="13">runs · metrics · provenance</text>
+    </g>
+    <g transform="translate(730 235)">
+      <rect width="180" height="105" rx="18" fill="#101E32" stroke="#818CF8" stroke-opacity="0.75"/>
+      <circle cx="90" cy="0" r="18" fill="#818CF8"/>
+      <text x="90" y="6" fill="#1E1B4B" font-size="17" font-weight="800">04</text>
+      <text x="90" y="48" fill="#F1F5F9" font-size="17" font-weight="700">PAPER</text>
+      <text x="90" y="76" fill="#94A3B8" font-size="13">figures · references · review</text>
+    </g>
+    <g transform="translate(950 235)">
+      <rect width="180" height="105" rx="18" fill="#101E32" stroke="#A78BFA" stroke-opacity="0.75"/>
+      <circle cx="90" cy="0" r="18" fill="#A78BFA"/>
+      <text x="90" y="6" fill="#2E1065" font-size="17" font-weight="800">05</text>
+      <text x="90" y="48" fill="#F1F5F9" font-size="17" font-weight="700">DELIVERY</text>
+      <text x="90" y="76" fill="#94A3B8" font-size="13">package · verify · freeze</text>
+    </g>
+  </g>
+
+  <g fill="#CBD5E1">
+    <path d="M258 282 l14 8 -14 8z"/>
+    <path d="M478 282 l14 8 -14 8z"/>
+    <path d="M698 282 l14 8 -14 8z"/>
+    <path d="M918 282 l14 8 -14 8z"/>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif" text-anchor="middle">
+    <text x="600" y="386" fill="#E2E8F0" font-size="15" font-weight="600">Team decisions stay explicit. Agent work stays traceable. Results stay reproducible.</text>
+    <text x="600" y="411" fill="#64748B" font-size="12">Technical checks support review — they never replace scientific judgment.</text>
+  </g>
+</svg>

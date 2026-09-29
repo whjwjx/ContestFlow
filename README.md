@@ -1,14 +1,56 @@
-# ContestFlow
+<div align="center">
 
-**团队主导、面向 Agent 的数模竞赛工作流与可复现工具包。** 把读题、建模、实验、论文和交付串在同一份可追溯工作区里，让团队更容易作出判断、核验结果并完成协作。
+<img src="docs/assets/contestflow-hero.svg" alt="ContestFlow：团队主导的数模竞赛工作流" width="100%">
 
-团队负责理解问题、决定模型假设与实验预算、解释结论并审定提交；AI在团队已授权的阶段内辅助分析、编程、实验和文字整理；工具保存材料来源、运行记录和证据，检查产物之间是否一致。团队应能解释最终采用的模型、核心代码和结论，AI 的实际贡献也应如实披露。
+<p><strong>把读题、建模、实验、论文与交付连接成一条可审查、可复现的证据链。</strong></p>
 
-**目前是 `0.2.0a1` 实验版本。** “全流程”表示覆盖各阶段的辅助工作。一次工具链运行、一个校验通过的 ZIP，都不代表完成了建模论证、团队审阅或比赛提交。CLI 本身不调用 LLM，也不自动上传比赛平台。
+<p>
+  <img src="https://img.shields.io/badge/release-0.2.0a1-7C3AED?style=flat-square" alt="Release 0.2.0a1">
+  <img src="https://img.shields.io/badge/Python-3.11%2B-2563EB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/workflow-human--led-0F766E?style=flat-square" alt="Human-led workflow">
+  <img src="https://img.shields.io/badge/license-MIT-334155?style=flat-square" alt="MIT License">
+</p>
 
-不同赛题、规则、操作系统和工具版本下的实际效果可能不同，请以本地预检和真实运行结果为准，并根据诊断信息调整配置、适配器或流程。
+<p>
+  <a href="#核心能力">核心能力</a> ·
+  <a href="#从一次团队协作开始">协作方式</a> ·
+  <a href="#快速开始安装与导入材料">快速开始</a> ·
+  <a href="#文档与开发">文档</a>
+</p>
 
-仓库由一个简短的 [Agent skill](skills/contestflow/SKILL.md)、按阶段读取的指南、可复用资源和本地 CLI 组成。skill 引导 Agent 使用工具与保存证据，CLI 不承担研究决策；安装与宿主适配见 [skill 使用说明](docs/agent-skill.md)。
+</div>
+
+ContestFlow 是一个**团队主导、面向 Agent 的数模竞赛工作流与可复现工具包**。团队负责理解题意、选择模型、安排实验、解释证据并审定提交；Agent 在已授权的阶段内辅助分析、编程、实验和文字整理；本地工具负责保存来源、运行记录与产物身份。
+
+> [!IMPORTANT]
+> “全流程”指覆盖比赛各阶段的协作与核验，并不表示一次运行就能完成建模论证或直接提交。CLI 不调用 LLM，也不上传比赛平台。当前为 `0.2.0a1` 实验版本，不同赛题、规则和本机环境请以预检及真实运行结果为准。
+
+## 核心能力
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🧭 分阶段的人机协作</strong><br>
+      把团队决定、Agent 建议和自动检查分开记录。已有授权可以连续执行，关键研究判断仍由团队掌握。
+    </td>
+    <td width="50%" valign="top">
+      <strong>🧪 可复现的实验与证据</strong><br>
+      记录输入、代码、参数、环境、指标和失败尝试；上游改变后，旧证据会被识别为过期。
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🧰 可复用的赛前能力</strong><br>
+      发现非默认目录中的工具，管理绘图与配色资源，用固定小样例检查科学计算、文档和交付环境。
+    </td>
+    <td width="50%" valign="top">
+      <strong>📦 从论文到候选包的核验</strong><br>
+      用同一正文源构建 HTML/PDF，绑定图表与证据，检查实际 ZIP、包内复现结果和冻结字节。
+    </td>
+  </tr>
+</table>
+
+仓库由轻量 [Agent skill](skills/contestflow/SKILL.md)、按阶段读取的指南、可复用资源和本地 CLI 组成。skill 帮助 Agent 判断范围并调用工具，CLI 提供可核验的工程操作；安装与宿主适配见 [skill 使用说明](docs/agent-skill.md)。
 
 ## 从一次团队协作开始
 
@@ -34,7 +76,7 @@
 
 > 采用路线 B，先验证假设 H1，实验限时 30 分钟。请在这个阶段内连续完成基线与对比，保留失败记录，结束后汇报证据和待审结论。
 
-## 安装与导入材料
+## 快速开始：安装与导入材料
 
 AI 应按[入口规范](AGENTS.md)建立独立工作区。也可手动启动材料导入：
 
