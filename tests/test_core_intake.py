@@ -1,8 +1,10 @@
+import json
 import zipfile
 
 import pytest
 
 from contestflow import core, intake, project
+from contestflow.cli import main
 
 
 @pytest.fixture
@@ -93,3 +95,40 @@ def test_frozen_stops_import(workspace, tmp_path):
     path.write_text("text")
     with pytest.raises(core.FlowError):
         intake.intake(workspace, path)
+
+
+def test_cli_start_does_not_invent_solution(tmp_path, capsys):
+    source = tmp_path / "statement.md"
+    source.write_text("# A new problem\nFind a model for the attached measurements.\n")
+    root = tmp_path / "contest"
+    assert main(["start", str(root), "--materials", str(source)]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["next"]["stage"] == "analysis"
+    assert data["next"]["collaboration_mode"] == "team_led"
+    assert data["next"]["guidance_only"] is True
+    assert data["next"]["human_review"] == "not_asserted"
+    assert data["next"]["team_focus"]
+    assert core.read_json(root / "plans/requirements.json")["items"] == []
+    before = core.snapshot(root, ["src", "configs", "paper", "plans", "docs", "contest.json"])
+    assert main(["next", str(root)]) == 0
+    capsys.readouterr()
+    assert main(["status", str(root)]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["human_review"] == "not_asserted"
+    assert status["platform_submission"] == "not_observed"
+    assert before == core.snapshot(
+        root, ["src", "configs", "paper", "plans", "docs", "contest.json"]
+    )
+    assert main(["run", str(root)]) == 2
+
+
+def test_refresh_guidance_preserves_existing_team_records(workspace):
+    entry = workspace / "AGENTS.md"
+    decisions = workspace / "docs/DECISIONS.md"
+    core.write_text(entry, "Existing team-specific instructions.\n")
+    core.write_text(decisions, "Team feedback: compare the baseline before choosing a model.\n")
+    before = core.snapshot(workspace, ["AGENTS.md", "docs/DECISIONS.md"])
+    step = project.plan(workspace)
+    assert before == core.snapshot(workspace, ["AGENTS.md", "docs/DECISIONS.md"])
+    assert core.read_json(workspace / "plans/current.json")["team_focus"] == step["team_focus"]
+    assert step["human_review"] == "not_asserted"

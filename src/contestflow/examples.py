@@ -110,6 +110,10 @@ def seed_example(root, kind):
         )
     write_json(local(root, "configs/experiments.json"), {"schema_version": 1, "experiments": specs})
     draft = (
+        "# Teaching Workflow Example\n\n"
+        "This example uses preset inputs, methods, code and draft text to demonstrate the toolchain. "
+        "In a real competition, the team defines the problem, chooses the model, evaluates the evidence "
+        "and reviews the final manuscript. Running this demo does not perform those judgments.\n\n"
         f"# Problem and Scope\n\n{statement.split(chr(10), 2)[-1]}\n\n"
         f"# Method\n\n{method}\n\n# Results\n\n"
         f"The baseline value is {{{{metric:baseline:{metric}}}}}; the improved value is {{{{metric:improved:{metric}}}}}. "
