@@ -84,14 +84,36 @@ AI 应按[入口规范](AGENTS.md)建立独立工作区。也可手动启动材�
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -e ".[science,documents,dev]"
-.\.venv\Scripts\contestflow start workspaces/my-contest --materials "D:\path\to\problems" --title "我的比赛"
+$ContestWorkspace = "D:\contests\my-contest"
+.\.venv\Scripts\contestflow start $ContestWorkspace --materials "D:\path\to\problems" --title "我的比赛" --git-mode local
+.\.venv\Scripts\contestflow repo $ContestWorkspace
 ```
 
 需要 Python 3.11 或以上。Linux/macOS 使用 `.venv/bin/python` 和 `.venv/bin/contestflow`。核心命令不依赖科学计算包，`science` 供示例与绘图，`documents` 供 PDF 读取和 Pandoc。生成 PDF 还需系统安装 XeLaTeX 及所用字体。
 
-接下来让 AI 读取生成的 `workspaces/my-contest/AGENTS.md` 与 `docs/AI_TASK.md`，整理读题包。既有比赛不会被重新初始化覆盖；原件按哈希复制，导入代码不执行。
+接下来让 AI 读取生成的 `$ContestWorkspace\AGENTS.md` 与 `docs/AI_TASK.md`，整理读题包。正式比赛建议放在工具源码仓库之外；既有比赛不会被重新初始化覆盖，原件按哈希复制，导入代码不执行。
 
 升级工具后，已有工作区的 `AGENTS.md` 不会自动更新。请阅读并合并新版协作原则，再用 `contestflow plan <工作区>` 刷新生成的 `docs/AI_TASK.md`；团队决定等已有记录应保留，无需重新 `init` 旧工作区。
+
+## 独立比赛仓库与团队分支
+
+ContestFlow 源码仓库只维护通用工具；每场正式比赛使用一个包含 `contest.json` 的独立目录与独立 Git 仓库。Agent 开始编辑或提交前运行 `contestflow repo <工作区绝对路径>`，只有 `status: ready` 且 `root_matches: true` 时才执行该工作区的 Git 操作。这可以避免在工具包仓库、另一场比赛或父仓库中误提交。
+
+| 模式 | Agent 的 Git 行为 |
+|---|---|
+| `off` | 不初始化、不提交、不推送；适合只试用流程 |
+| `local` | 在 `agent/<member>/<goal>` 任务分支形成可审阅的里程碑提交，不推送 |
+| `team` | 同样按里程碑提交；远端已由团队配置时，正常推送自己负责的任务分支 |
+
+CLI 负责初始化与核对仓库、在实验记录中保存分支和提交身份，不会自行 `commit`、`push`、配置远端或合并分支。Agent 根据工作区生成的 `AGENTS.md` 执行这些动作：先查看现有改动，按任务创建分支，只暂存明确文件，并在需求基线、可运行基线、成组实验、论文阶段稿或交付候选等节点提交。`main`、`dev` 保持受保护；团队从任务分支审阅、合并或拣选。
+
+需要简单多人协作时，新建工作区可改用 `--git-mode team`。团队确认私有或公开远端地址后只需配置一次：
+
+```powershell
+git -C $ContestWorkspace remote add origin <团队仓库地址>
+```
+
+之后每位队友或 Agent 使用不同的 `agent/<member>/<goal>` 分支，并交换分支名与提交号。Agent 只正常推送自己的任务分支，不强推、不猜测远端、不自动合并他人的工作。原始题面、数据、运行目录和本机配置默认被忽略；需要共享时使用团队认可的渠道并核对哈希。完整规则见 [Git 与团队协作](docs/git-collaboration.md)。
 
 ## 复用资源与赛前准备
 
@@ -99,8 +121,8 @@ python -m venv .venv
 
 ~~~powershell
 .\.venv\Scripts\contestflow doctor
-.\.venv\Scripts\contestflow resources workspaces/my-contest --select tool.numpy tool.matplotlib palette.project-p7
-.\.venv\Scripts\contestflow preflight workspaces/my-contest --profile full-html --level rehearsal --output .contestflow/preflight/first-rehearsal
+.\.venv\Scripts\contestflow resources $ContestWorkspace --select tool.numpy tool.matplotlib palette.project-p7
+.\.venv\Scripts\contestflow preflight $ContestWorkspace --profile full-html --level rehearsal --output "$ContestWorkspace\.contestflow\preflight\first-rehearsal"
 ~~~
 
 `doctor` 只盘点；`preflight` 支持盘点、实际小样例验证和独立合成流程演练。已选择的资源自动加入所需检查，未选择的 GPU 等能力不算缺项。完整 PDF 演练可使用 `full-pdf`；生成的图、文档仍需实际打开审阅。检查结果明确区分通过、失败、缺失、未验证和本次不需要。
@@ -137,12 +159,13 @@ python -m venv .venv
 所有命令都可加 `--help`；路径参数允许绝对或相对路径。
 
 ```text
-contestflow init PATH [--example assignment|forecast]
-contestflow start PATH --materials SOURCE
+contestflow init PATH [--git-mode off|local|team] [--example assignment|forecast]
+contestflow start PATH --materials SOURCE [--git-mode off|local|team]
 contestflow intake PATH --materials SOURCE
 contestflow plan PATH
 contestflow next PATH
 contestflow status PATH
+contestflow repo PATH [--init local|team | --disable]
 contestflow run PATH --allow-exec [--workers 2] [--force]
 contestflow compare PATH
 contestflow charts PATH
@@ -178,6 +201,7 @@ ContestFlow 仍在 Alpha 阶段，欢迎把真实使用中遇到的问题和可�
 ## 文档与开发
 
 - [团队协作与 AI 辅助边界](AGENTS.md)
+- [Git 与团队协作](docs/git-collaboration.md)
 - [Agent skill 安装与分工](docs/agent-skill.md)
 - [Alpha 发布检查](docs/releasing.md)
 - [架构与协议](docs/architecture.md)
@@ -192,4 +216,4 @@ ContestFlow 仍在 Alpha 阶段，欢迎把真实使用中遇到的问题和可�
 .\.venv\Scripts\python -m build
 ```
 
-核心与示例代码采用 MIT 许可证。输入题面、第三方数据、字体、论文模板、官方评测器不因使用本工具自动获得再分发许可。仓库默认忽略 `workspaces/`；公开或分享文件前仍需检查实际内容。
+核心与示例代码采用 MIT 许可证。输入题面、第三方数据、字体、论文模板、官方评测器不因使用本工具自动获得再分发许可。工具仓库默认忽略 `workspaces/`，该目录只用于演示或临时演练；正式比赛使用独立仓库。公开或分享文件前仍需检查实际内容。

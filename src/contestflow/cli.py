@@ -52,6 +52,7 @@ def parser():
         "plan",
         "next",
         "status",
+        "repo",
         "run",
         "compare",
         "charts",
@@ -74,6 +75,7 @@ def parser():
             "plan": "Write stage guidance for the team and AI",
             "next": "Suggest next work from artifact state",
             "status": "Show artifact state and unverified human-review status",
+            "repo": "Inspect or initialize the exact competition Git repository",
             "package": "Build a candidate archive for team review",
             "verify": "Check file integrity and configured reproduction",
             "freeze": "Freeze candidate bytes",
@@ -85,6 +87,11 @@ def parser():
         sub.add_argument("workspace", type=Path)
         if command in ("init", "start"):
             sub.add_argument("--title", default="New competition")
+            sub.add_argument(
+                "--git-mode",
+                choices=("off", "local", "team"),
+                help="Initialize/adopt this exact workspace as a local or team Git repository",
+            )
         if command == "init":
             sub.add_argument("--example", choices=("assignment", "forecast"))
         if command in ("start", "intake"):
@@ -110,11 +117,25 @@ def parser():
             )
         if command == "demo":
             sub.add_argument("--example", choices=("assignment", "forecast"), default="assignment")
+        if command == "repo":
+            changes = sub.add_mutually_exclusive_group()
+            changes.add_argument("--init", choices=("local", "team"), dest="repo_init")
+            changes.add_argument("--disable", action="store_true")
     return result
 
 
 def dispatch(args):
-    from . import charts, evidence, examples, intake, project, release, reporting, runner
+    from . import (
+        charts,
+        evidence,
+        examples,
+        intake,
+        project,
+        release,
+        reporting,
+        runner,
+        version_control,
+    )
 
     if args.command in ("doctor", "tools", "resources", "preflight"):
         root = args.workspace.absolute() if args.workspace else None
@@ -157,15 +178,20 @@ def dispatch(args):
     root = args.workspace.absolute()
     command = args.command
     if command == "init":
-        result = project.init(root, args.title)
+        result = project.init(root, args.title, args.git_mode or "off")
         if args.example:
             examples.seed_example(root, args.example)
             project.plan(root)
         return result
     if command == "start":
         if not (root / "contest.json").exists():
-            project.init(root, args.title)
+            project.init(root, args.title, args.git_mode or "off")
         with workspace_lock(root):
+            if args.git_mode and version_control.policy(root)["mode"] != args.git_mode:
+                if args.git_mode == "off":
+                    version_control.disable(root)
+                else:
+                    version_control.enable(root, args.git_mode)
             imported = intake.intake(root, args.materials)
             step = project.plan(root)
         return {
@@ -173,7 +199,17 @@ def dispatch(args):
             "imported": len(imported["files"]),
             "next": step,
             "agent_entry": str(root / "docs/AI_TASK.md"),
+            "repository": version_control.inspect(root),
         }
+    if command == "repo":
+        if args.repo_init or args.disable:
+            with workspace_lock(root):
+                return (
+                    version_control.enable(root, args.repo_init)
+                    if args.repo_init
+                    else version_control.disable(root)
+                )
+        return version_control.inspect(root)
     if command in ("next", "status"):
         return project.next_task(root) if command == "next" else project.status(root)
     if command == "demo":

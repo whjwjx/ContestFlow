@@ -17,7 +17,9 @@ REQUIRED = {
     "contestflow/toolchain.py",
     "contestflow/resources.py",
     "contestflow/paper_resources.py",
+    "contestflow/version_control.py",
     "contestflow/templates/resources.json",
+    "contestflow/templates/workspace-agents.md",
 }
 MAX_TOTAL = 16 * 1024 * 1024
 
@@ -62,6 +64,7 @@ def check_members(members, kind):
         raise ValueError("License missing from distribution")
     if kind == "sdist":
         for required_file in (
+            "docs/git-collaboration.md",
             "skills/contestflow/SKILL.md",
             "skills/contestflow/agents/openai.yaml",
             "skills/contestflow/references/setup-and-resources.md",

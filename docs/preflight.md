@@ -5,18 +5,20 @@
 ## 三种检查深度
 
 ~~~powershell
+$ContestWorkspace = "D:\contests\my-contest"
+
 # 无工作区也能先盘点；只发现路径和安装信息，不执行工具。
 contestflow doctor
 contestflow tools
 
 # 已有比赛按共享配置和所选资源检查。
-contestflow preflight workspaces/my-contest
+contestflow preflight $ContestWorkspace
 
 # 实际运行随包小样例，保留本地报告和可查看的图表/文档。
-contestflow preflight workspaces/my-contest --profile full-html --level functional --output .contestflow/preflight/first-check
+contestflow preflight $ContestWorkspace --profile full-html --level functional --output "$ContestWorkspace\.contestflow\preflight\first-check"
 
 # 用独立合成例演练实验、底表、所选配色、论文和实际 ZIP 解包复现。
-contestflow preflight workspaces/my-contest --profile full-pdf --level rehearsal --output .contestflow/preflight/pdf-rehearsal
+contestflow preflight $ContestWorkspace --profile full-pdf --level rehearsal --output "$ContestWorkspace\.contestflow\preflight\pdf-rehearsal"
 ~~~
 
 未激活环境时使用 `.venv\Scripts\contestflow.exe`；Linux/macOS 为 `.venv/bin/contestflow`。当前进程的 Python 就是受检解释器，报告记录其准确路径。更换 Python 时从目标环境启动命令，不自动切换解释器。
@@ -55,13 +57,13 @@ PDF 使用 `contest.json` 中 `paper.cjk_font` 和 `paper.main_font`。未配置
 contestflow tools --set pandoc "D:\My Tools\Pandoc\pandoc.exe"
 
 # 仅本场比赛使用该路径，覆盖用户级设置。
-contestflow tools workspaces/my-contest --set xelatex "D:\TeX Tools\bin\xelatex.exe"
+contestflow tools $ContestWorkspace --set xelatex "D:\TeX Tools\bin\xelatex.exe"
 
 # 登记补充目录；查该目录及有限的 bin/Scripts 子目录，不遍历整盘。
 contestflow tools --search-dir "E:\Research Tools"
 
 # 清除本层指定路径，再按优先级发现。
-contestflow tools workspaces/my-contest --unset xelatex
+contestflow tools $ContestWorkspace --unset xelatex
 ~~~
 
 指定路径失效时明确报 `invalid`，避免悄悄换成另一版本。补充搜索同一优先级出现多个候选时报 `ambiguous` 并列出路径，团队选择后用 `--set` 保存。PATH 已有的顺序会被尊重。每次使用重新检查路径，不依赖永不过期的发现缓存。
