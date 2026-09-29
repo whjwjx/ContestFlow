@@ -9,6 +9,7 @@
   <img src="https://img.shields.io/badge/Python-3.11%2B-2563EB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/workflow-human--led-0F766E?style=flat-square" alt="Human-led workflow">
   <img src="https://img.shields.io/badge/license-MIT-334155?style=flat-square" alt="MIT License">
+  <a href="https://github.com/whjwjx/ContestFlow/stargazers"><img src="https://img.shields.io/github/stars/whjwjx/ContestFlow?style=flat-square&color=F59E0B" alt="GitHub Stars"></a>
 </p>
 
 <p>
@@ -165,6 +166,14 @@ Markdown 支持 `{{metric:实验ID:指标名}}`、`{{table:comparison}}` 和 `{{
 中文 PDF 在 `contest.json` 的 `paper.cjk_font` 填已安装字体名，规则优先于个人偏好。PDF/HTML 共享正文，版式仍需分别检查。图表提供两种适合标量比较的图型、默认三套配色，另可选择资源库中的 P6/P7 子集或自定义配色及两种表格样式；复杂流程图、分布和配对分析需按题目另行实现，并说明数据依据。
 
 AI 参与了路线建议、核心代码、分析或保留文本时，应按实际使用与当届规则记录和披露。团队主导描述的是决策与核验责任，不能据此淡化 AI 已经完成的工作。工具不预填未经核实的模型名、版本发布日期或人工审阅结论。
+
+## 参与与反馈
+
+ContestFlow 仍在 Alpha 阶段，欢迎把真实使用中遇到的问题和可复用经验带回来：
+
+- 遇到错误、环境兼容问题或流程断点，请[提交 Issue](https://github.com/whjwjx/ContestFlow/issues/new)，附上最小复现、系统与 Python 版本；不要上传私有题面、凭据或队伍信息。
+- 想增加题型适配器、工具资源、检查规则或文档，请先阅读[贡献规范](CONTRIBUTING.md)，让新增能力带有公开的小样例、测试和适用边界。
+- 如果这个项目帮你减少了环境排查、实验追踪或交付核验的成本，欢迎给仓库一个 [Star](https://github.com/whjwjx/ContestFlow/stargazers)，让更多需要这类工作流的人找到它。
 
 ## 文档与开发
 
