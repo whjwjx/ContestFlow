@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "contestflow-local"
-version = "0.1.0"
-description = "Evidence-first, AI-ready mathematical modeling competition workflows"
+version = "0.2.0a1"
+description = "Team-led, agent-oriented modeling workflows and reproducible local tools"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -13,9 +13,15 @@ license-files = ["LICENSE"]
 dependencies = []
 
 [project.optional-dependencies]
-science = ["numpy>=1.26", "scipy>=1.11", "matplotlib>=3.8"]
-documents = ["pypdf>=5", "pypandoc_binary>=1.15"]
-dev = ["pytest>=8", "ruff>=0.9", "build>=1.2"]
+# Security floors on plotting transitive dependencies also apply to existing environments.
+science = ["numpy>=1.26", "scipy>=1.11", "matplotlib>=3.8", "pillow>=12.3.0", "fonttools>=4.66.0"]
+documents = ["pypdf>=6.19.0", "pypandoc_binary>=1.17"]
+dev = ["pytest>=9.1.1", "ruff>=0.16.9", "build>=1.6.1", "pygments>=2.21.0"]
+audit = ["pip-audit>=2.10.1"]
+
+[project.urls]
+Repository = "https://github.com/whjwjx/ContestFlow"
+Issues = "https://github.com/whjwjx/ContestFlow/issues"
 
 [project.scripts]
 contestflow = "contestflow.cli:main"

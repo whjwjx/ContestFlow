@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .core import (
     FlowError,
+    config,
     digest,
     identity,
     journal,
@@ -21,12 +22,10 @@ from .core import (
 )
 from .evidence import require_evidence
 from .project import template
+from .resources import palette_colors, palette_context
 
-PALETTES = {
-    "journal": ["#0072B2", "#D55E00", "#009E73", "#CC79A7"],
-    "contrast": ["#245C43", "#A33754", "#326AAB", "#967300"],
-    "mono": ["#242424", "#666666", "#929292", "#B5B5B5"],
-}
+# Kept for callers that use the original default palette mapping.
+PALETTES = palette_colors()
 
 
 def render(root, evidence, metric, kind, palette, output):
@@ -43,10 +42,19 @@ def render(root, evidence, metric, kind, palette, output):
     values = [row[metric] for row in rows]
     labels = ["\n".join(textwrap.wrap(row["experiment"], 24)) for row in rows]
     available = {font.name for font in font_manager.fontManager.ttflist}
-    preferred = next(
+    configured_font = config(root).get("paper", {}).get("cjk_font", "")
+    if configured_font and configured_font not in available:
+        raise FlowError(f"Configured figure font is unavailable: {configured_font}")
+    preferred = configured_font or next(
         (
             name
-            for name in ("Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei", "SimHei")
+            for name in (
+                "Noto Sans CJK SC",
+                "Source Han Sans SC",
+                "Microsoft YaHei",
+                "SimHei",
+                "PingFang SC",
+            )
             if name in available
         ),
         "DejaVu Sans",
@@ -62,7 +70,8 @@ def render(root, evidence, metric, kind, palette, output):
         }
     ):
         fig, ax = plt.subplots(figsize=(7.2, max(3.2, len(rows) * 0.55)), layout="constrained")
-        colors = [PALETTES[palette][i % len(PALETTES[palette])] for i in range(len(rows))]
+        selected_colors = palette_colors(root)[palette]
+        colors = [selected_colors[i % len(selected_colors)] for i in range(len(rows))]
         if kind == "bar":
             ax.barh(labels, values, color=colors, height=0.56)
         else:
@@ -87,6 +96,10 @@ def render(root, evidence, metric, kind, palette, output):
         plt.close(fig)
 
 
+def _font_context(root):
+    return {"cjk_font": config(root).get("paper", {}).get("cjk_font", "")}
+
+
 def review_current(root):
     data = read_json(local(root, "reviews/manifest.json"))
     if data.get("review_id") != identity({k: v for k, v in data.items() if k != "review_id"}):
@@ -94,6 +107,10 @@ def review_current(root):
     evidence = require_evidence(root)
     if data["evidence_id"] != evidence["context_id"] or data["renderer"] != digest(Path(__file__)):
         raise FlowError("Figure review is stale; regenerate charts and choose again")
+    if data.get("resources") != palette_context(root):
+        raise FlowError("Figure resources changed; regenerate charts and choose again")
+    if data.get("font_config") != _font_context(root):
+        raise FlowError("Figure font configuration changed; regenerate charts and choose again")
     for name, sha in data["artifacts"].items():
         if digest(local(root, name)) != sha:
             raise FlowError(f"Review image changed: {name}")
@@ -167,12 +184,16 @@ def charts(root):
     require_mutable(root)
     evidence = require_evidence(root)
     metrics = evidence["context"]["definitions"]["metrics"]
+    palettes = palette_colors(root)
+    resources = palette_context(root)
     folder = local(root, "reviews/images")
     folder.mkdir(parents=True, exist_ok=True)
     review = {
         "schema_version": 1,
         "evidence_id": evidence["context_id"],
         "renderer": digest(Path(__file__)),
+        "resources": resources,
+        "font_config": _font_context(root),
         "metrics": metrics,
         "variants": [],
         "artifacts": {},
@@ -180,7 +201,7 @@ def charts(root):
     for metric in metrics:
         safe_name(metric)
         for kind in ("bar", "dot"):
-            for palette in PALETTES:
+            for palette in palettes:
                 name = f"{metric}-{kind}-{palette}"
                 render(root, evidence, metric, kind, palette, folder / name)
                 item = {"id": name, "metric": metric, "kind": kind, "palette": palette}
@@ -197,7 +218,8 @@ def charts(root):
         "__PAYLOAD__", json.dumps(payload, ensure_ascii=False).replace("<", "\\u003c")
     )
     write_text(local(root, "reviews/index.html"), body)
-    first = {metric: f"{metric}-bar-journal" for metric in metrics}
+    first_palette = next(iter(palettes))
+    first = {metric: f"{metric}-bar-{first_palette}" for metric in metrics}
     if not local(root, "reviews/selection.json").exists():
         apply_selection(
             root, {"review_id": review["review_id"], "choices": first}, "automatic-default"

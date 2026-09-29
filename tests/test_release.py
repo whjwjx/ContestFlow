@@ -1,9 +1,12 @@
 import json
+import subprocess
+import time
 import zipfile
+from types import SimpleNamespace
 
 import pytest
 
-from contestflow import core, project, release
+from contestflow import core, project, release, runner
 
 
 def archive(path, names, overrides=None):
@@ -133,3 +136,175 @@ def test_nonportable_archive_names(tmp_path, name):
     archive(path, [(name, b"content")])
     with pytest.raises(core.FlowError):
         release.verify_archive(path)
+
+
+def smoke_fixture(tmp_path, monkeypatch, script="pass\n", **settings):
+    path = tmp_path / "smoke.zip"
+    archive(path, [("src/solver.py", script.encode("utf-8"))])
+    spec = {
+        "command": ["{python}", "src/solver.py"],
+        "result": "smoke-result.json",
+        "timeout_seconds": 60,
+        **settings,
+    }
+    monkeypatch.setattr(release, "config", lambda root: {"package": {"smoke": spec}})
+    return path, release.verify_archive(path)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        *(
+            ("timeout_seconds", value)
+            for value in (
+                "nan",
+                "10",
+                float("nan"),
+                -1,
+                0,
+                float("inf"),
+                181,
+                True,
+                False,
+                None,
+                10**1000,
+            )
+        ),
+        *(
+            ("command", value)
+            for value in (
+                [],
+                "python solver.py",
+                ["python", None],
+                ["python", 1],
+                ["python", ""],
+                ["python", " "],
+                ["python", "\0"],
+            )
+        ),
+        *(
+            ("result", value)
+            for value in (
+                None,
+                7,
+                "../outside.json",
+                "/absolute.json",
+                "src/solver.py",
+                "SRC/SOLVER.PY",
+                "src",
+                "src/solver.py/new.json",
+                "smoke.log",
+                "SMOKE.LOG",
+                "MANIFEST.json",
+            )
+        ),
+        *(
+            ("expected_metrics", value)
+            for value in (
+                None,
+                [],
+                {"score": float("nan")},
+                {"score": float("inf")},
+                {"": 1},
+                {"score": True},
+                {"score": "1"},
+                {3: 1},
+                {"score": 10**1000},
+            )
+        ),
+        *(
+            ("tolerance", value)
+            for value in ("nan", float("nan"), -1, float("inf"), True, 10**1000)
+        ),
+    ],
+)
+def test_invalid_smoke_settings_never_start_code(tmp_path, monkeypatch, field, value):
+    path, manifest = smoke_fixture(tmp_path, monkeypatch, **{field: value})
+    monkeypatch.setattr(
+        release.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("invalid spec spawned")
+    )
+    with pytest.raises(core.FlowError):
+        release.smoke_archive(tmp_path, path, manifest, allow_exec=True)
+
+
+@pytest.mark.parametrize("spec", [None, [], "command", {"result": "x.json"}])
+def test_malformed_smoke_spec_never_starts_code(tmp_path, monkeypatch, spec):
+    monkeypatch.setattr(release, "config", lambda root: {"package": {"smoke": spec}})
+    monkeypatch.setattr(
+        release.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("invalid spec spawned")
+    )
+    with pytest.raises(core.FlowError):
+        release.smoke_archive(tmp_path, tmp_path / "absent.zip", {"members": {}}, True)
+
+
+def test_smoke_zero_tolerance_and_upper_timeout_are_valid(tmp_path, monkeypatch):
+    script = (
+        "import json; from pathlib import Path; "
+        "Path('smoke-result.json').write_text(json.dumps({'valid':True,'metrics':{'cost':44}}))"
+    )
+    path, manifest = smoke_fixture(
+        tmp_path,
+        monkeypatch,
+        script,
+        expected_metrics={"cost": 44},
+        tolerance=0,
+        timeout_seconds=180,
+    )
+    result = release.smoke_archive(tmp_path, path, manifest, allow_exec=True)
+    assert result["status"] == "passed"
+    assert result["result"]["metrics"] == {"cost": 44}
+
+
+@pytest.mark.parametrize("mode", ["timeout", "wait-error", "interrupt"])
+def test_actual_smoke_failures_terminate_process_tree(tmp_path, monkeypatch, mode):
+    monkeypatch.delenv("CONTESTFLOW_PREFLIGHT_CHILD", raising=False)
+    ready = tmp_path / "child-ready.txt"
+    escaped = tmp_path / "escaped.txt"
+    descendant = (
+        "from pathlib import Path; import time; "
+        f"Path({str(ready)!r}).write_text('ready'); time.sleep(2); "
+        f"Path({str(escaped)!r}).write_text('escaped')"
+    )
+    script = (
+        "import subprocess,sys,time; "
+        f"subprocess.Popen([sys.executable,'-c',{descendant!r}]); time.sleep(60)"
+    )
+    path, manifest = smoke_fixture(tmp_path, monkeypatch, script, timeout_seconds=1)
+    launched = []
+    original_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        launched.append(process)
+        if mode != "timeout":
+            original_wait = process.wait
+
+            def interrupted_wait(timeout):
+                deadline = time.monotonic() + 3
+                while not ready.exists() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                process.wait = original_wait
+                assert ready.exists(), "test child did not start"
+                if mode == "interrupt":
+                    raise KeyboardInterrupt()
+                raise OSError("simulated wait failure")
+
+            process.wait = interrupted_wait
+        return process
+
+    monkeypatch.setattr(
+        release,
+        "subprocess",
+        SimpleNamespace(Popen=popen, TimeoutExpired=subprocess.TimeoutExpired),
+    )
+    expected = {"timeout": core.FlowError, "wait-error": OSError, "interrupt": KeyboardInterrupt}
+    try:
+        with pytest.raises(expected[mode]):
+            release.smoke_archive(tmp_path, path, manifest, allow_exec=True)
+        assert launched and launched[0].poll() is not None
+        assert ready.exists(), "test descendant must actually run before cleanup"
+        time.sleep(2.2)
+        assert not escaped.exists(), "descendant survived smoke cleanup"
+    finally:
+        if launched and launched[0].poll() is None:
+            runner.kill_tree(launched[0])

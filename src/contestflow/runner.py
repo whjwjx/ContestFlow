@@ -136,6 +136,17 @@ def current_runs(root):
     return [latest(root, spec) for spec in experiments(root)]
 
 
+def child_process_options():
+    """Keep internal preflight descendants inside the externally supervised session."""
+    if os.name == "nt":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    if os.environ.get("CONTESTFLOW_PREFLIGHT_CHILD") == "1":
+        if os.getsid(0) != os.getpid() or os.getpgrp() != os.getpid():
+            raise FlowError("Internal preflight mode requires an isolated session/group leader")
+        return {}
+    return {"start_new_session": True}
+
+
 def kill_tree(process):
     if os.name == "nt":
         subprocess.run(
@@ -145,6 +156,14 @@ def kill_tree(process):
             check=False,
         )
     else:
+        if os.environ.get("CONTESTFLOW_PREFLIGHT_CHILD") == "1":
+            # An internal timeout aborts the entire disposable probe, including
+            # this leader and sibling work. This also clears grandchildren after
+            # the direct child exits. Never signal a shared host session.
+            if os.getsid(0) != os.getpid() or os.getpgrp() != os.getpid():
+                raise FlowError("Refusing to terminate an unisolated host process group")
+            os.killpg(os.getpgrp(), signal.SIGKILL)
+            raise FlowError("Preflight process group terminated")  # unreachable after SIGKILL
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
@@ -187,11 +206,7 @@ def run_one(root: Path, spec, force=False):
     start = time.monotonic()
     try:
         with (run_dir / "stdout.log").open("wb") as out, (run_dir / "stderr.log").open("wb") as err:
-            options = (
-                {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-                if os.name == "nt"
-                else {"start_new_session": True}
-            )
+            options = child_process_options()
             process = subprocess.Popen(
                 argv, cwd=root, stdout=out, stderr=err, shell=False, **options
             )

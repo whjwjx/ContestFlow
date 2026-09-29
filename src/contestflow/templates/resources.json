@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "resources": [
+    {
+      "id": "tool.numpy",
+      "kind": "tool",
+      "title": "NumPy",
+      "source_url": "https://numpy.org/doc/stable/",
+      "purpose": "数组计算、数值数据处理和可复现的合成示例。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "science"
+      ],
+      "reuse": "在比赛项目的 Python 环境中使用；记录当前预检的实际版本，保存随机种子及输入口径。原软件使用条件以官方说明为准。",
+      "status": "collected"
+    },
+    {
+      "id": "tool.scipy",
+      "kind": "tool",
+      "title": "SciPy",
+      "source_url": "https://docs.scipy.org/doc/scipy/",
+      "purpose": "优化、统计等候选方法的科学计算基础；是否适用须由本题约束与实验验证。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "science"
+      ],
+      "reuse": "先运行小型已知答案算例，再接入题目数据；记录算法参数、收敛条件和失败情况。原软件使用条件以官方说明为准。",
+      "status": "collected"
+    },
+    {
+      "id": "tool.matplotlib",
+      "kind": "tool",
+      "title": "Matplotlib",
+      "source_url": "https://matplotlib.org/stable/users/explain/customizing.html",
+      "purpose": "从可追溯底表生成科研图表，并复用配色与局部样式设置。",
+      "requirements": [
+        "contestflow-local[science]",
+        "所选字体须在当前机器可用"
+      ],
+      "checks": [
+        "plots"
+      ],
+      "reuse": "通过 rc_context 限定样式作用域；生成 PNG/PDF 后按论文实际尺寸检查文字、单位、图例和灰度区分。字体许可另行核对。",
+      "status": "collected"
+    },
+    {
+      "id": "tool.pandoc",
+      "kind": "tool",
+      "title": "Pandoc",
+      "source_url": "https://pandoc.org/MANUAL.html",
+      "purpose": "把 Markdown 工作稿构建为 HTML，或配合 LaTeX 生成候选 PDF。",
+      "requirements": [
+        "Pandoc 可执行文件或 contestflow-local[documents]"
+      ],
+      "checks": [
+        "documents-html"
+      ],
+      "reuse": "优先沿用项目选定的可用路径；版本发现和最小构建由预检记录。不要把构建成功当作内容已经审定。",
+      "status": "collected"
+    },
+    {
+      "id": "tool.xelatex",
+      "kind": "tool",
+      "title": "XeLaTeX",
+      "source_url": "https://tug.org/xetex/",
+      "purpose": "配合 Pandoc 构建含中文、公式的论文 PDF。",
+      "requirements": [
+        "XeLaTeX",
+        "模板需要的 TeX 宏包",
+        "符合使用条件的中西文字体"
+      ],
+      "checks": [
+        "documents-pdf"
+      ],
+      "reuse": "按项目配置选字体并实际编译最小文档；检查成品中的中文、公式、字体嵌入及页面。字体选择不自动代表比赛规则合规。",
+      "status": "collected"
+    },
+    {
+      "id": "tool.pypdf",
+      "kind": "tool",
+      "title": "pypdf",
+      "source_url": "https://pypdf.readthedocs.io/en/stable/",
+      "purpose": "读取构建出的 PDF 页面与文本，辅助技术检查。",
+      "requirements": [
+        "contestflow-local[documents]"
+      ],
+      "checks": [
+        "documents-pdf"
+      ],
+      "reuse": "从当前环境记录真实版本；自动提取不能代替查看最终 PDF，也不能验证模型和论文结论。",
+      "status": "collected"
+    },
+    {
+      "id": "palette.journal",
+      "kind": "palette",
+      "title": "ContestFlow journal（项目选色）",
+      "source_url": "https://jfly.uni-koeln.de/color/",
+      "purpose": "少量类别的离散配色；历史名称 journal 不代表期刊规范。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "plots"
+      ],
+      "reuse": "保留 ContestFlow 原有四个颜色及顺序，为来源颜色的项目选用子集；类别较多时会循环。结合文字、形状或线型区分，并检查实际成图。",
+      "status": "project_used",
+      "colors": [
+        "#0072B2",
+        "#D55E00",
+        "#009E73",
+        "#CC79A7"
+      ]
+    },
+    {
+      "id": "palette.contrast",
+      "kind": "palette",
+      "title": "ContestFlow contrast（项目选色）",
+      "source_url": "https://github.com/whjwjx/ContestFlow",
+      "purpose": "少量类别的离散配色候选，沿用工具原有配置。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "plots"
+      ],
+      "reuse": "可与其他候选并排比较；名称不保证所有背景、打印条件和色觉下的对比效果。按论文实际尺寸检查。",
+      "status": "project_used",
+      "colors": [
+        "#245C43",
+        "#A33754",
+        "#326AAB",
+        "#967300"
+      ]
+    },
+    {
+      "id": "palette.mono",
+      "kind": "palette",
+      "title": "ContestFlow mono（项目灰度）",
+      "source_url": "https://github.com/whjwjx/ContestFlow",
+      "purpose": "灰度输出与打印检查的候选方案。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "plots"
+      ],
+      "reuse": "浅灰在小尺寸中可能不易区分，须配合直接标注、形状或线型；不把灰度配色等同于可访问性已通过。",
+      "status": "project_used",
+      "colors": [
+        "#242424",
+        "#666666",
+        "#929292",
+        "#B5B5B5"
+      ]
+    },
+    {
+      "id": "palette.project-p6",
+      "kind": "palette",
+      "title": "项目经验 P6（三色子集）",
+      "source_url": "https://sronpersonalpages.nl/~pault/",
+      "purpose": "从既有项目的配色选择记录沉淀的三色候选。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "plots"
+      ],
+      "reuse": "P6 是项目标签，记录来源指向 Paul Tol；不是完整官方调色板名称或色觉验证结论。复用颜色值时重新检查当前图型、类别、印刷和背景。",
+      "status": "project_used",
+      "colors": [
+        "#4477BB",
+        "#228833",
+        "#CC4466"
+      ]
+    },
+    {
+      "id": "palette.project-p7",
+      "kind": "palette",
+      "title": "项目经验 P7（三色子集）",
+      "source_url": "https://jfly.uni-koeln.de/color/",
+      "purpose": "从既有项目的配色选择记录沉淀的三色候选。",
+      "requirements": [
+        "contestflow-local[science]"
+      ],
+      "checks": [
+        "plots"
+      ],
+      "reuse": "P7 是项目标签，为来源颜色的选用子集，不是完整官方调色板。保留图例及形状/线型等冗余编码；团队偏好不表示规则或可访问性审核完成。",
+      "status": "project_used",
+      "colors": [
+        "#56B4E9",
+        "#E69F00",
+        "#CC79A7"
+      ]
+    }
+  ]
+}

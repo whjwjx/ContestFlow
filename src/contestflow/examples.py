@@ -1,12 +1,24 @@
-"""Public-domain-style synthetic fixtures; no competition assets are copied."""
+"""AI-assisted synthetic teaching fixtures with explicit data-generation recipes."""
 
 from __future__ import annotations
 
 import math
 
-from .core import config, local, require_mutable, write_json, write_text
+from .core import config, digest, identity, local, require_mutable, write_json, write_text
 from .intake import intake
 from .project import template
+
+ASSIGNMENT_SEED = 20260929
+
+
+def assignment_fixture():
+    """A fixed arithmetic fixture, not a sampled population or a novel algorithm."""
+    state = ASSIGNMENT_SEED
+    values = []
+    for _ in range(16):
+        state = (1664525 * state + 1013904223) % (2**32)
+        values.append(1 + state % 30)
+    return {"costs": [values[start : start + 4] for start in range(0, 16, 4)]}
 
 
 def seed_example(root, kind):
@@ -18,7 +30,9 @@ def seed_example(root, kind):
     cfg["title"] = (
         "Synthetic assignment study" if kind == "assignment" else "Synthetic temporal forecast"
     )
-    cfg["rules"]["source"] = "Self-authored synthetic example; not a competition rule profile"
+    cfg["rules"]["source"] = (
+        "AI-assisted synthetic teaching example; not a competition rule profile"
+    )
     cfg["package"]["include"] += ["data/processed"]
     cfg["package"]["smoke"] = {
         "command": [
@@ -37,7 +51,7 @@ def seed_example(root, kind):
     write_json(local(root, "contest.json"), cfg)
     write_text(local(root, "src/solver.py"), template(kind + ".py.txt"))
     if kind == "assignment":
-        data = {"costs": [[9, 2, 7, 8], [6, 4, 3, 7], [5, 8, 1, 8], [7, 6, 9, 4]]}
+        data = assignment_fixture()
         metric = "cost"
         spec = {
             "label": "Total cost",
@@ -66,7 +80,34 @@ def seed_example(root, kind):
         scope = "This is one synthetic chronological holdout, not rolling validation. It does not demonstrate real-world generalization or uncertainty calibration."
         reference = "[NumPy least-squares documentation](https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html)"
         packages = ["numpy"]
-    write_json(local(root, "data/processed/input.json"), data)
+    input_path = local(root, "data/processed/input.json")
+    write_json(input_path, data)
+    if kind == "assignment":
+        provenance = {
+            "schema_version": 1,
+            "fixture": "synthetic-assignment-v2",
+            "purpose": "Fixed AI-assisted teaching fixture; no originality or performance claim",
+            "seed": ASSIGNMENT_SEED,
+            "recurrence": "state = (1664525 * state + 1013904223) mod 2**32",
+            "mapping": "16 successive updates; cost = 1 + state mod 30; fill 4x4 row-major",
+            "cost_range_inclusive": [1, 30],
+            "canonical_data_sha256": identity(data),
+            "input_file_sha256": digest(input_path),
+        }
+        write_json(local(root, "data/processed/provenance.json"), provenance)
+        data_note = (
+            f"The 4x4 cost matrix is generated from seed {ASSIGNMENT_SEED}. "
+            "For each of 16 row-major entries, update state = "
+            "(1664525 * state + 1013904223) mod 2**32, then set cost = 1 + state mod 30. "
+            "This fixed teaching fixture was prepared with AI assistance; it is not a claim "
+            "of mathematical originality or representative benchmark sampling. "
+            "The recipe and input hashes are saved in data/processed/provenance.json."
+        )
+    else:
+        data_note = (
+            "The 60 values are generated as 10 + 0.8*i + 0.4*sin(0.7*i), for i = 0,...,59. "
+            "This AI-assisted synthetic teaching fixture is not an observed dataset."
+        )
     statement_path = local(root, "docs/synthetic-problem.md")
     write_text(statement_path, statement)
     imported = intake(root, statement_path)
@@ -110,7 +151,12 @@ def seed_example(root, kind):
         )
     write_json(local(root, "configs/experiments.json"), {"schema_version": 1, "experiments": specs})
     draft = (
+        "# Teaching Workflow Example\n\n"
+        "This example uses preset inputs, methods, code and draft text to demonstrate the toolchain. "
+        "In a real competition, the team defines the problem, chooses the model, evaluates the evidence "
+        "and reviews the final manuscript. Running this demo does not perform those judgments.\n\n"
         f"# Problem and Scope\n\n{statement.split(chr(10), 2)[-1]}\n\n"
+        f"# Data Generation\n\n{data_note}\n\n"
         f"# Method\n\n{method}\n\n# Results\n\n"
         f"The baseline value is {{{{metric:baseline:{metric}}}}}; the improved value is {{{{metric:improved:{metric}}}}}. "
         "Both values are substituted from successful, fingerprint-verified experiments.\n\n"
@@ -127,6 +173,8 @@ def seed_example(root, kind):
         + ", ".join(packages)
         + ".\n\n"
         "```sh\npython src/solver.py --input data/processed/input.json --method improved --output result.json\n```\n\n"
-        "Inspect result.json for feasibility and metrics. This smoke does not rerun every experiment.\n",
+        "Inspect result.json for feasibility and metrics. This smoke does not rerun every experiment.\n\n"
+        + data_note
+        + "\n",
     )
     return {"example": kind, "workspace": str(root)}

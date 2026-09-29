@@ -1,4 +1,4 @@
-"""Provider-neutral CLI. An active AI reads the generated task and supplies domain reasoning."""
+"""Local tools for human-led competition work with stage-scoped AI assistance."""
 
 from __future__ import annotations
 
@@ -12,10 +12,39 @@ from .core import FlowError, read_json, workspace_lock
 
 
 def parser():
-    result = argparse.ArgumentParser(prog="contestflow")
+    result = argparse.ArgumentParser(
+        prog="contestflow",
+        description="Human-led modeling workflows with AI-assisted stages.",
+        epilog="Technical checks do not certify team review or submission readiness.",
+    )
     result.add_argument("--version", action="version", version=__version__)
     subs = result.add_subparsers(dest="command", required=True)
-    subs.add_parser("doctor", help="Read-only environment check")
+    doctor = subs.add_parser("doctor", help="Read-only inventory using the actual tool resolver")
+    doctor.add_argument("workspace", type=Path, nargs="?")
+    tool = subs.add_parser("tools", help="Discover tools or remember local executable paths")
+    tool.add_argument("workspace", type=Path, nargs="?")
+    changes = tool.add_mutually_exclusive_group()
+    changes.add_argument("--set", nargs=2, metavar=("TOOL", "EXECUTABLE"))
+    changes.add_argument("--search-dir", type=Path)
+    changes.add_argument("--unset", metavar="TOOL")
+    resource = subs.add_parser(
+        "resources", help="Browse reusable tools/styles or select them for a workspace"
+    )
+    resource.add_argument("workspace", type=Path, nargs="?")
+    resource.add_argument("--select", nargs="*", metavar="RESOURCE_ID")
+    check = subs.add_parser(
+        "preflight", help="Inventory, fixed functional probes, or a synthetic rehearsal"
+    )
+    check.add_argument("workspace", type=Path, nargs="?")
+    from .preflight import PROFILES
+
+    check.add_argument("--profile", choices=tuple(PROFILES))
+    check.add_argument(
+        "--level", choices=("inventory", "functional", "rehearsal"), default="inventory"
+    )
+    check.add_argument(
+        "--output", type=Path, help="New local report/artifact directory; never overwrites"
+    )
     for command in (
         "init",
         "start",
@@ -33,7 +62,26 @@ def parser():
         "freeze",
         "demo",
     ):
-        sub = subs.add_parser(command)
+        help_text = {
+            "init": "Create a team workspace",
+            "intake": "Index materials and preserve source copies",
+            "run": "Run configured experiments within the selected scope",
+            "compare": "Build evidence tables from recorded results",
+            "charts": "Generate chart choices for review",
+            "select": "Import chart presentation choices",
+            "paper": "Build a candidate manuscript for team review",
+            "start": "Import materials for team-led problem analysis",
+            "plan": "Write stage guidance for the team and AI",
+            "next": "Suggest next work from artifact state",
+            "status": "Show artifact state and unverified human-review status",
+            "package": "Build a candidate archive for team review",
+            "verify": "Check file integrity and configured reproduction",
+            "freeze": "Freeze candidate bytes",
+            "demo": "Run a preset teaching example",
+        }
+        sub = subs.add_parser(
+            command, help=help_text.get(command), description=help_text.get(command)
+        )
         sub.add_argument("workspace", type=Path)
         if command in ("init", "start"):
             sub.add_argument("--title", default="New competition")
@@ -42,7 +90,11 @@ def parser():
         if command in ("start", "intake"):
             sub.add_argument("--materials", type=Path, required=True)
         if command in ("run", "verify", "demo"):
-            sub.add_argument("--allow-exec", action="store_true")
+            sub.add_argument(
+                "--allow-exec",
+                action="store_true",
+                help="Permit configured code execution; does not approve a model or its results",
+            )
         if command == "run":
             sub.add_argument("--workers", type=int)
             sub.add_argument("--force", action="store_true")
@@ -53,7 +105,9 @@ def parser():
         if command == "verify":
             sub.add_argument("--smoke", action="store_true")
         if command == "freeze":
-            sub.add_argument("--confirm", action="store_true")
+            sub.add_argument(
+                "--confirm", action="store_true", help="Confirm byte freeze, not team review"
+            )
         if command == "demo":
             sub.add_argument("--example", choices=("assignment", "forecast"), default="assignment")
     return result
@@ -62,8 +116,44 @@ def parser():
 def dispatch(args):
     from . import charts, evidence, examples, intake, project, release, reporting, runner
 
-    if args.command == "doctor":
-        return project.doctor()
+    if args.command in ("doctor", "tools", "resources", "preflight"):
+        root = args.workspace.absolute() if args.workspace else None
+        if root is not None:
+            from .core import config
+
+            config(root)
+        if args.command == "doctor":
+            return project.doctor(root)
+        if args.command == "tools":
+            from . import toolchain
+
+            if args.set or args.search_dir or args.unset:
+                kwargs = {
+                    "tool": args.set[0] if args.set else None,
+                    "path": args.set[1] if args.set else None,
+                    "search_dir": str(args.search_dir) if args.search_dir else None,
+                    "unset": args.unset,
+                }
+                if root is not None:
+                    with workspace_lock(root):
+                        return toolchain.configure(root, **kwargs)
+                return toolchain.configure(**kwargs)
+            return {
+                name: toolchain.discover_tool(name, root)
+                for name in ("pandoc", "xelatex", "git", "nvidia-smi")
+            }
+        if args.command == "resources":
+            from . import resources
+
+            if args.select is not None:
+                if root is None:
+                    raise FlowError("Selecting resources requires a workspace")
+                with workspace_lock(root):
+                    return resources.select_resources(root, args.select)
+            return resources.catalog(root)
+        from .preflight import preflight
+
+        return preflight(root, args.profile, args.level, args.output)
     root = args.workspace.absolute()
     command = args.command
     if command == "init":
@@ -113,6 +203,9 @@ def dispatch(args):
             "review": str(root / "reviews/index.html"),
             "paper": str(root / f"paper/build/paper.{args.format}"),
             "verification": checked,
+            "purpose": "toolchain_demo",
+            "human_review": "not_asserted",
+            "note": "预设教学例只演示工具链。实际比赛仍需团队理解题意、选择模型、审定结果与论文。",
         }
     with workspace_lock(root):
         if command == "intake":
@@ -139,11 +232,17 @@ def dispatch(args):
 
 
 def main(argv=None):
+    # JSON is UTF-8 even when Windows pipes would otherwise use a legacy code page.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     args = parser().parse_args(argv)
     try:
         result = dispatch(args)
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         if args.command == "run" and any(r["status"] != "success" for r in result):
+            return 1
+        if args.command == "preflight" and result["result"] == "failed":
             return 1
         return 0
     except (FlowError, OSError, ValueError, KeyError) as exc:
