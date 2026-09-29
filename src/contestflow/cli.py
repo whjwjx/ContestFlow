@@ -19,7 +19,32 @@ def parser():
     )
     result.add_argument("--version", action="version", version=__version__)
     subs = result.add_subparsers(dest="command", required=True)
-    subs.add_parser("doctor", help="Read-only environment check")
+    doctor = subs.add_parser("doctor", help="Read-only inventory using the actual tool resolver")
+    doctor.add_argument("workspace", type=Path, nargs="?")
+    tool = subs.add_parser("tools", help="Discover tools or remember local executable paths")
+    tool.add_argument("workspace", type=Path, nargs="?")
+    changes = tool.add_mutually_exclusive_group()
+    changes.add_argument("--set", nargs=2, metavar=("TOOL", "EXECUTABLE"))
+    changes.add_argument("--search-dir", type=Path)
+    changes.add_argument("--unset", metavar="TOOL")
+    resource = subs.add_parser(
+        "resources", help="Browse reusable tools/styles or select them for a workspace"
+    )
+    resource.add_argument("workspace", type=Path, nargs="?")
+    resource.add_argument("--select", nargs="*", metavar="RESOURCE_ID")
+    check = subs.add_parser(
+        "preflight", help="Inventory, fixed functional probes, or a synthetic rehearsal"
+    )
+    check.add_argument("workspace", type=Path, nargs="?")
+    from .preflight import PROFILES
+
+    check.add_argument("--profile", choices=tuple(PROFILES))
+    check.add_argument(
+        "--level", choices=("inventory", "functional", "rehearsal"), default="inventory"
+    )
+    check.add_argument(
+        "--output", type=Path, help="New local report/artifact directory; never overwrites"
+    )
     for command in (
         "init",
         "start",
@@ -91,8 +116,44 @@ def parser():
 def dispatch(args):
     from . import charts, evidence, examples, intake, project, release, reporting, runner
 
-    if args.command == "doctor":
-        return project.doctor()
+    if args.command in ("doctor", "tools", "resources", "preflight"):
+        root = args.workspace.absolute() if args.workspace else None
+        if root is not None:
+            from .core import config
+
+            config(root)
+        if args.command == "doctor":
+            return project.doctor(root)
+        if args.command == "tools":
+            from . import toolchain
+
+            if args.set or args.search_dir or args.unset:
+                kwargs = {
+                    "tool": args.set[0] if args.set else None,
+                    "path": args.set[1] if args.set else None,
+                    "search_dir": str(args.search_dir) if args.search_dir else None,
+                    "unset": args.unset,
+                }
+                if root is not None:
+                    with workspace_lock(root):
+                        return toolchain.configure(root, **kwargs)
+                return toolchain.configure(**kwargs)
+            return {
+                name: toolchain.discover_tool(name, root)
+                for name in ("pandoc", "xelatex", "git", "nvidia-smi")
+            }
+        if args.command == "resources":
+            from . import resources
+
+            if args.select is not None:
+                if root is None:
+                    raise FlowError("Selecting resources requires a workspace")
+                with workspace_lock(root):
+                    return resources.select_resources(root, args.select)
+            return resources.catalog(root)
+        from .preflight import preflight
+
+        return preflight(root, args.profile, args.level, args.output)
     root = args.workspace.absolute()
     command = args.command
     if command == "init":
@@ -171,11 +232,17 @@ def dispatch(args):
 
 
 def main(argv=None):
+    # JSON is UTF-8 even when Windows pipes would otherwise use a legacy code page.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     args = parser().parse_args(argv)
     try:
         result = dispatch(args)
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         if args.command == "run" and any(r["status"] != "success" for r in result):
+            return 1
+        if args.command == "preflight" and result["result"] == "failed":
             return 1
         return 0
     except (FlowError, OSError, ValueError, KeyError) as exc:

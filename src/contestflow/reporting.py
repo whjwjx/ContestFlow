@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
+import platform
 import re
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -24,20 +24,56 @@ from .core import (
     write_text,
 )
 from .evidence import require_evidence
+from .runner import child_process_options, kill_tree
+from .toolchain import resolve_tool, tool_identity
 
 
-def pandoc_path():
-    found = os.environ.get("PANDOC") or shutil.which("pandoc")
-    if found and Path(found).is_file():
-        return found
+def pandoc_path(root=None):
+    return resolve_tool("pandoc", root)
+
+
+def paper_font_settings(settings, text):
+    """Use the same explicit or platform-default Chinese font in probes and builds."""
+    effective = dict(settings)
+    if not effective.get("cjk_font") and re.search(
+        r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\U00020000-\U0003134f]", text
+    ):
+        effective["cjk_font"] = {"Windows": "Microsoft YaHei", "Darwin": "PingFang SC"}.get(
+            platform.system(), "Noto Sans CJK SC"
+        )
+    return effective
+
+
+def preflight_pdf_engine_options(engine):
+    """Disable MiKTeX package installation in disposable preflight compilations."""
+    if os.environ.get("CONTESTFLOW_PREFLIGHT_CHILD") != "1":
+        return []
+    process = subprocess.Popen(
+        [engine, "--version"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        **child_process_options(),
+    )
     try:
-        import pypandoc
-
-        return pypandoc.get_pandoc_path()
-    except (ImportError, OSError) as exc:
+        stdout, stderr = process.communicate(timeout=10)
+    except subprocess.TimeoutExpired as exc:
+        kill_tree(process)
+        raise FlowError("XeLaTeX version check timed out during preflight") from exc
+    if process.returncode:
         raise FlowError(
-            "Pandoc missing. Install [documents], or set PANDOC to its executable."
-        ) from exc
+            "XeLaTeX version check failed during preflight: " + (stderr or stdout)[-1000:]
+        )
+    version = (stdout + stderr).lower()
+    if "miktex" in version:
+        return ["--pdf-engine-opt=-disable-installer"]
+    if "tex live" not in version:
+        raise FlowError(
+            "Preflight could not identify the XeLaTeX distribution; no PDF build was attempted"
+        )
+    return []
 
 
 def paper_context(root):
@@ -51,6 +87,7 @@ def paper_context(root):
         "evidence_id": evidence["context_id"],
         "selection": selection,
         "builder": digest(Path(__file__)),
+        "tools": {name: tool_identity(name, root) for name in ("pandoc", "xelatex")},
     }
 
 
@@ -110,8 +147,8 @@ def build_paper(root, output_format="html"):
     ctx = paper_context(root)
     context_id = identity(ctx)
     text = resolved_markdown(root)
-    executable = pandoc_path()
-    settings = config(root)["paper"]
+    executable = pandoc_path(root)
+    settings = paper_font_settings(config(root)["paper"], text + "\n" + config(root)["title"])
     build_dir = local(root, "paper/build")
     build_dir.mkdir(parents=True, exist_ok=True)
     previous_path = build_dir / "manifest.json"
@@ -138,9 +175,8 @@ def build_paper(root, output_format="html"):
             str(target),
         ]
         if output_format == "pdf":
-            engine = shutil.which("xelatex")
-            if not engine:
-                raise FlowError("XeLaTeX missing; install a TeX distribution or build HTML first")
+            engine = resolve_tool("xelatex", root)
+            argv += preflight_pdf_engine_options(engine)
             argv += [
                 "--pdf-engine=" + engine,
                 "--pdf-engine-opt=-no-shell-escape",
@@ -176,11 +212,7 @@ def build_paper(root, output_format="html"):
                 ),
             )
             argv += ["--css", str(css)]
-        options = (
-            {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-            if os.name == "nt"
-            else {"start_new_session": True}
-        )
+        options = child_process_options()
         process = subprocess.Popen(
             argv,
             cwd=root,
@@ -194,8 +226,6 @@ def build_paper(root, output_format="html"):
         try:
             stdout, stderr = process.communicate(timeout=180)
         except subprocess.TimeoutExpired as exc:
-            from .runner import kill_tree
-
             kill_tree(process)
             stdout, stderr = process.communicate()
             write_text(build_dir / "build.log", stdout + stderr)
