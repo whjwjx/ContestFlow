@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import platform
 import re
@@ -9,17 +10,16 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from . import paper_resources
 from .charts import selection_current
 from .core import (
     FlowError,
-    config,
     digest,
     identity,
     journal,
     local,
     read_json,
     require_mutable,
-    snapshot,
     write_json,
     write_text,
 )
@@ -79,14 +79,13 @@ def preflight_pdf_engine_options(engine):
 def paper_context(root):
     evidence = require_evidence(root)
     selection = selection_current(root)
-    inputs = snapshot(
-        root, ["paper/draft.md", "paper/references.bib", "paper/figures", "contest.json"]
-    )
+    inputs = paper_resources.input_snapshot(root)
     return {
         "inputs": inputs,
         "evidence_id": evidence["context_id"],
         "selection": selection,
         "builder": digest(Path(__file__)),
+        "resource_policy": digest(Path(paper_resources.__file__)),
         "tools": {name: tool_identity(name, root) for name in ("pandoc", "xelatex")},
     }
 
@@ -104,11 +103,16 @@ def paper_current(root):
         return False
 
 
-def resolved_markdown(root):
+def resolved_markdown(root, expected_sha=None):
     evidence = require_evidence(root)
     rows = {row["experiment"]: row for row in evidence["rows"]}
     metrics = evidence["context"]["definitions"]["metrics"]
-    text = local(root, "paper/draft.md").read_text(encoding="utf-8")
+    data = (
+        paper_resources.read_bound_input(root, "paper/draft.md", expected_sha)
+        if expected_sha is not None
+        else local(root, "paper/draft.md").read_bytes()
+    )
+    text = data.decode("utf-8")
     if re.search(r"\b(TODO|TBD|PLACEHOLDER)\b", text, re.I):
         raise FlowError("Manuscript still contains TODO/TBD/PLACEHOLDER")
 
@@ -146,9 +150,13 @@ def build_paper(root, output_format="html"):
         raise FlowError("Supported paper formats: html, pdf")
     ctx = paper_context(root)
     context_id = identity(ctx)
-    text = resolved_markdown(root)
+    text = resolved_markdown(root, ctx["inputs"]["paper/draft.md"])
+    settings_source = json.loads(
+        paper_resources.read_bound_input(root, "contest.json", ctx["inputs"]["contest.json"])
+    )
     executable = pandoc_path(root)
-    settings = paper_font_settings(config(root)["paper"], text + "\n" + config(root)["title"])
+    settings = paper_font_settings(settings_source["paper"], text + "\n" + settings_source["title"])
+    paper_resources.font_settings(settings)
     build_dir = local(root, "paper/build")
     build_dir.mkdir(parents=True, exist_ok=True)
     previous_path = build_dir / "manifest.json"
@@ -156,21 +164,26 @@ def build_paper(root, output_format="html"):
     artifacts = previous.get("artifacts", {}) if paper_current(root) else {}
     with tempfile.TemporaryDirectory(prefix="compile-", dir=build_dir) as temp:
         stage = Path(temp)
-        source = stage / "resolved.md"
-        write_text(source, text)
+        source, data_dir = paper_resources.prepare_document(
+            root,
+            stage,
+            text,
+            executable,
+            ctx["inputs"],
+            output_format,
+            build_dir / "build.log",
+            settings_source["title"],
+        )
         target = stage / ("paper." + output_format)
         argv = [
             executable,
             str(source),
-            "--from=markdown",
+            "--from=json",
+            "--sandbox",
+            "--data-dir=" + str(data_dir),
             "--standalone",
-            "--citeproc",
             "--resource-path",
-            str(root),
-            "--bibliography",
-            str(root / "paper/references.bib"),
-            "--metadata",
-            "title=" + config(root)["title"],
+            str(stage),
             "-o",
             str(target),
         ]
@@ -198,24 +211,24 @@ def build_paper(root, output_format="html"):
                 )
                 argv += ["--include-in-header", str(header)]
         else:
-            argv += ["--embed-resources"]
-            css = stage / "paper.css"
+            css = stage / "paper-style.html"
             write_text(
                 css,
-                "body{max-width:820px;margin:40px auto;padding:0 24px;font:16px/1.75 Georgia,'Microsoft YaHei',serif;color:#222}"
+                "<style>body{max-width:820px;margin:40px auto;padding:0 24px;font:16px/1.75 Georgia,'Microsoft YaHei',serif;color:#222}"
                 "img{max-width:100%;height:auto}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #ccc}"
                 "thead{border-top:2px solid #222;border-bottom:1px solid #222}"
                 + (
                     "tbody tr:nth-child(even){background:#eef4f1}"
                     if ctx["selection"]["table_style"] == "striped"
                     else ""
-                ),
+                )
+                + "</style>",
             )
-            argv += ["--css", str(css)]
+            argv += ["--include-in-header", str(css)]
         options = child_process_options()
         process = subprocess.Popen(
             argv,
-            cwd=root,
+            cwd=stage,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -230,6 +243,10 @@ def build_paper(root, output_format="html"):
             stdout, stderr = process.communicate()
             write_text(build_dir / "build.log", stdout + stderr)
             raise FlowError("Paper build timed out after 180 seconds") from exc
+        except BaseException:
+            kill_tree(process)
+            process.communicate()
+            raise
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
         write_text(build_dir / "build.log", result.stdout + result.stderr)
         if result.returncode or not target.is_file():

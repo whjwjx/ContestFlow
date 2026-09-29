@@ -1,10 +1,12 @@
 # ContestFlow
 
-**团队主导的数模比赛全流程 AI 辅助工作台。** 把读题、建模、实验、论文和交付串在同一份可追溯工作区里，让团队更容易作出判断、核验结果并完成协作。
+**团队主导、面向 Agent 的数模竞赛工作流与可复现工具包。** 把读题、建模、实验、论文和交付串在同一份可追溯工作区里，让团队更容易作出判断、核验结果并完成协作。
 
 团队负责理解问题、决定模型假设与实验预算、解释结论并审定提交；AI在团队已授权的阶段内辅助分析、编程、实验和文字整理；工具保存材料来源、运行记录和证据，检查产物之间是否一致。团队应能解释最终采用的模型、核心代码和结论，AI 的实际贡献也应如实披露。
 
-**目前是可运行的 0.1 版。** “全流程”表示覆盖各阶段的辅助工作。一次工具链运行、一个校验通过的 ZIP，都不代表完成了建模论证、团队审阅或比赛提交。CLI 本身不调用 LLM，也不自动上传比赛平台。
+**目前是 `0.2.0a1` 实验版本。** “全流程”表示覆盖各阶段的辅助工作。一次工具链运行、一个校验通过的 ZIP，都不代表完成了建模论证、团队审阅或比赛提交。CLI 本身不调用 LLM，也不自动上传比赛平台。
+
+仓库由一个简短的 [Agent skill](skills/contestflow/SKILL.md)、按阶段读取的指南、可复用资源和本地 CLI 组成。skill 引导 Agent 使用工具与保存证据，CLI 不承担研究决策；安装与宿主适配见 [skill 使用说明](docs/agent-skill.md)。
 
 ## 从一次团队协作开始
 
@@ -40,7 +42,7 @@ python -m venv .venv
 .\.venv\Scripts\contestflow start workspaces/my-contest --materials "D:\path\to\problems" --title "我的比赛"
 ```
 
-Linux/macOS 使用 `.venv/bin/python` 和 `.venv/bin/contestflow`。核心命令不依赖科学计算包，`science` 供示例与绘图，`documents` 供 PDF 读取和 Pandoc。生成 PDF 还需系统安装 XeLaTeX 及所用字体。
+需要 Python 3.11 或以上。Linux/macOS 使用 `.venv/bin/python` 和 `.venv/bin/contestflow`。核心命令不依赖科学计算包，`science` 供示例与绘图，`documents` 供 PDF 读取和 Pandoc。生成 PDF 还需系统安装 XeLaTeX 及所用字体。
 
 接下来让 AI 读取生成的 `workspaces/my-contest/AGENTS.md` 与 `docs/AI_TASK.md`，整理读题包。既有比赛不会被重新初始化覆盖；原件按哈希复制，导入代码不执行。
 
@@ -70,7 +72,7 @@ Linux/macOS 使用 `.venv/bin/python` 和 `.venv/bin/contestflow`。核心命令
 
 `demo` 连续执行预先写好的教学题、算法、指标和报告模板，用来演示从实验到候选包的技术链路。真实比赛中的问题理解、模型选择、论证和团队审阅仍需逐项完成；演示成功不证明工具能独立解答新赛题。
 
-优化示例使用 SciPy 求解分配问题，并以小规模枚举独立核对；预测示例使用 NumPy 拟合线性趋势，按时间划分训练与留出数据。示例不构成竞赛成果或真实泛化验证。
+优化示例使用 SciPy 求解分配问题，并以小规模枚举独立核对；预测示例使用 NumPy 拟合线性趋势，按时间划分训练与留出数据。示例不构成竞赛成果或真实泛化验证。数据配方、固定 seed 与来源边界见 [示例来源说明](docs/example-provenance.md)。
 
 演示结束后查看：
 
@@ -114,6 +116,8 @@ contestflow freeze PATH --confirm
 
 Markdown 支持 `{{metric:实验ID:指标名}}`、`{{table:comparison}}` 和 `{{figures}}`，构建时从有效底表替换。未运行成功、证据过期、未知指标或 `TODO` 占位会阻止构建。团队仍须核对手写数字、数学推导、文献来源和结论适用范围；自动检查只覆盖已实现的规则。
 
+论文采用 [受限 Markdown/Bib 与图片规则](docs/paper-resources.md)：正文图片仅使用 `paper/figures/` 内的 PNG/JPEG，外部资源、原始 HTML/TeX、SVG 和自定义宏需要转换或改写后使用。此限制同时用于 HTML 与 PDF。
+
 中文 PDF 在 `contest.json` 的 `paper.cjk_font` 填已安装字体名，规则优先于个人偏好。PDF/HTML 共享正文，版式仍需分别检查。图表提供两种适合标量比较的图型、默认三套配色，另可选择资源库中的 P6/P7 子集或自定义配色及两种表格样式；复杂流程图、分布和配对分析需按题目另行实现，并说明数据依据。
 
 AI 参与了路线建议、核心代码、分析或保留文本时，应按实际使用与当届规则记录和披露。团队主导描述的是决策与核验责任，不能据此淡化 AI 已经完成的工作。工具不预填未经核实的模型名、版本发布日期或人工审阅结论。
@@ -121,6 +125,8 @@ AI 参与了路线建议、核心代码、分析或保留文本时，应按实�
 ## 文档与开发
 
 - [团队协作与 AI 辅助边界](AGENTS.md)
+- [Agent skill 安装与分工](docs/agent-skill.md)
+- [Alpha 发布检查](docs/releasing.md)
 - [架构与协议](docs/architecture.md)
 - [扩展赛题适配器](docs/adapter-guide.md)
 - [安全与公开边界](SECURITY.md)
@@ -129,7 +135,7 @@ AI 参与了路线建议、核心代码、分析或保留文本时，应按实�
 
 ```powershell
 .\.venv\Scripts\python -m pytest -q
-.\.venv\Scripts\python -m ruff check src tests
+.\.venv\Scripts\python -m ruff check src tests scripts
 .\.venv\Scripts\python -m build
 ```
 
